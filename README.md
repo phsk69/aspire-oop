@@ -55,7 +55,9 @@ make run
 make dev
 ```
 
-The Aspire dashboard will be available at `http://localhost:15888` and the web application at `https://localhost:7071`.
+- The Aspire dashboard will be available at `https://localhost:17098`
+- The web app at `https://localhost:7071`
+- The API at `https://localhost:7201`
 
 ### Makefile Commands
 
