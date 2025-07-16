@@ -13,4 +13,9 @@
     <PackageReference Include="Aspire.Hosting.AppHost" Version="9.3.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\AspireDeezNuts.ApiService\AspireDeezNuts.ApiService.csproj" />
+    <ProjectReference Include="..\AspireDeezNuts.Web\AspireDeezNuts.Web.csproj" />
+  </ItemGroup>
+
 </Project>

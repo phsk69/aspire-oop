@@ -1,0 +1,6 @@
+@AspireDeezNuts.ApiService_HostAddress = http://localhost:5137
+
+GET {{AspireDeezNuts.ApiService_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
