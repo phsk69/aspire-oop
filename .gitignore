@@ -131,3 +131,13 @@ $RECYCLE.BIN/
 .DS_Store
 
 _NCrunch*
+
+# User-specific files
+.claude/*
+
+# Aspire and Kubernetes artifacts
+**/k8s-manifests/
+**/manifests/
+aspirate-state.json
+manifest.json
+publish/

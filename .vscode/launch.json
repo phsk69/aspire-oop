@@ -1,0 +1,18 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Run AppHost",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/src/AspireDeezNuts.AppHost/bin/Debug/net9.0/AspireDeezNuts.AppHost.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/AspireDeezNuts.AppHost",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            }
+        }
+    ]
+}

@@ -2,9 +2,21 @@ using AspireDeezNuts.Web.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Add service defaults & Aspire client integrations.
+builder.AddServiceDefaults();
+
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+builder.Services.AddBlazorBootstrap();
+
+// Add HttpClient for the API
+builder.Services.AddHttpClient("apiservice", client =>
+{
+    // This URL will be automatically resolved by Aspire's service discovery
+    client.BaseAddress = new Uri("https+http://apiservice");
+});
 
 var app = builder.Build();
 
@@ -18,11 +30,12 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-
 app.UseAntiforgery();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+app.MapDefaultEndpoints();
 
 app.Run();

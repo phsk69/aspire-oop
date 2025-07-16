@@ -1,3 +1,4 @@
 {
-    "dotnet.defaultSolution": "AspireDeezNuts.slnx"
+    "dotnet.defaultSolution": "AspireDeezNuts.slnx",
+    "makefile.configureOnOpen": false
 }
