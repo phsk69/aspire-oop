@@ -191,6 +191,81 @@ data:
   OTEL_EXPORTER_OTLP_ENDPOINT: "http://dashboard:18889"
 ```
 
+**Secret Template:**
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-secrets
+type: Opaque
+stringData:
+  ConnectionString: "Server=myserver;Database=mydb;User=myuser;Password=changeme"
+  ApiKey: "your-api-key-here"
+```
+
+**Persistent Volume Claim:**
+
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: app-data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+```
+
+**Dashboard Deployment:**
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aspire-dashboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aspire-dashboard
+  template:
+    metadata:
+      labels:
+        app: aspire-dashboard
+    spec:
+      containers:
+        - name: dashboard
+          image: mcr.microsoft.com/dotnet/aspire-dashboard:9.0
+          ports:
+            - containerPort: 18888
+              name: frontend
+            - containerPort: 18889
+              name: otlp
+          envFrom:
+            - configMapRef:
+                name: dashboard-config
+            - secretRef:
+                name: dashboard-secrets
+```
+
+**Kustomization File:**
+
+```yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - secret.yaml
+  - configmap.yaml
+  - pvc.yaml
+  - dashboard.yaml
+  - api-service.yaml
+  - web-service.yaml
+```
+
 ### Resource Management
 
 - **Memory**: 256Mi requests, 512Mi limits for standard services
