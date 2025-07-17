@@ -104,17 +104,12 @@ dotnet run --project src/AspireDeezNuts.ApiService   # API service only
    make docker-build
    ```
 
-2. **Generate manifests:**
-   ```bash
-   make k8s-generate
-   ```
-
-3. **Deploy to local Kubernetes:**
+2. **Deploy to local Kubernetes:**
    ```bash
    make k8s-deploy
    ```
 
-4. **Check status:**
+3. **Check status:**
    ```bash
    make k8s-status
    ```
@@ -122,10 +117,10 @@ dotnet run --project src/AspireDeezNuts.ApiService   # API service only
 ### Full Deployment Pipeline
 
 ```bash
-make deploy  # Builds containers, generates manifests, and deploys
+make deploy  # Builds containers and deploys to Kubernetes
 ```
 
-This uses the Aspirate tool to convert Aspire configuration into Kubernetes manifests automatically.
+The manifests in the `manifests/` directory are local and and should be created before deployment.
 
 ## Kubernetes Manifests
 
