@@ -11,11 +11,21 @@ builder.Services.AddRazorComponents()
 
 builder.Services.AddBlazorBootstrap();
 
-// Add HttpClient for the API
+// Add HttpClient for the API - configured for both local debugging and Kubernetes deployment
 builder.Services.AddHttpClient("apiservice", client =>
 {
-    // This URL will be automatically resolved by Aspire's service discovery
-    client.BaseAddress = new Uri("https+http://apiservice");
+    var deploymentEnv = builder.Configuration["DEPLOYMENT_ENVIRONMENT"];
+    
+    if (deploymentEnv == "Kubernetes")
+    {
+        // Kubernetes deployment: use HTTP service discovery (HTTPS not working in K8s yet)
+        client.BaseAddress = new Uri("http://aspire-deez-nuts-api:8080");
+    }
+    else
+    {
+        // Local debugging: use deterministic localhost URL with HTTPS
+        client.BaseAddress = new Uri("https://localhost:7201");
+    }
 });
 
 var app = builder.Build();

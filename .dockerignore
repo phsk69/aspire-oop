@@ -1,0 +1,97 @@
+# Git files
+.git/
+.gitignore
+.gitattributes
+
+# Visual Studio / VS Code
+.vs/
+.vscode/
+*.user
+*.suo
+*.userprefs
+
+# Build results
+**/[Dd]ebug/
+**/[Dd]ebugPublic/
+**/[Rr]elease/
+**/[Rr]eleases/
+**/x64/
+**/x86/
+**/bld/
+**/[Bb]in/
+**/[Oo]bj/
+**/[Ll]og/
+**/[Ll]ogs/
+
+# NuGet
+**/*.nupkg
+**/*.snupkg
+**/project.lock.json
+**/project.fragment.lock.json
+**/artifacts/
+
+# Testing
+**/[Tt]est[Rr]esult*/
+**/[Bb]uild[Ll]og.*
+**/*.VisualState.xml
+**/TestResult.xml
+**/nunit-*.xml
+
+# Sensitive configuration files
+**/appsettings.Production.json
+**/appsettings.Local.json
+**/appsettings.*.user.json
+**/secrets.json
+**/*.pfx
+**/*.key
+**/*.pem
+**/*.crt
+**/*.cer
+
+# Environment files
+**/.env
+**/.env.local
+**/.env.*.local
+
+# OS files
+**/.DS_Store
+**/Thumbs.db
+**/Desktop.ini
+
+# Documentation
+README.md
+CLAUDE.md
+docs/
+
+# Temporary files
+**/*.tmp
+**/*.temp
+**/*.log
+**/*.bak
+**/*.swp
+**/*~
+
+# Solution files (not needed for Docker build)
+*.sln
+*.slnx
+
+# IDE files
+.idea/
+*.iml
+
+# Kubernetes files
+aspirate-output/
+k8s/
+kubernetes/
+*.yaml
+*.yml
+
+# Makefile (not needed for Docker build)
+Makefile
+
+# Test projects (if any)
+**/*.Tests/
+**/*.Test/
+
+# Local tools
+.config/

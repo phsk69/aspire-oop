@@ -1,6 +1,6 @@
-# Aspire/Blazor Training
+# Aspire Object-Oriented Design Training
 
-A .NET Aspire distributed application with Blazor Server frontend and minimal API backend, featuring Kubernetes deployment capabilities.
+A .NET Aspire distributed application demonstrating object-oriented design patterns with Blazor Server frontend and minimal API backend. This project serves as a training ground for implementing design patterns from "Design Patterns: Elements of Reusable Object-Oriented Software" (Gang of Four book) while leveraging modern .NET Aspire orchestration and Kubernetes deployment capabilities.
 
 ## Prerequisites
 
@@ -122,3 +122,28 @@ make deploy  # Builds containers, generates manifests, and deploys
 ```
 
 This uses the Aspirate tool to convert Aspire configuration into Kubernetes manifests automatically.
+
+## Project Architecture
+
+### Current Structure
+- **AspireDeezNuts.AppHost**: Aspire orchestrator managing service discovery and configuration
+- **AspireDeezNuts.ServiceDefaults**: Shared configuration for OpenTelemetry, health checks, and service discovery
+- **AspireDeezNuts.ApiService**: Minimal API with weather forecast endpoint and OpenAPI support
+- **AspireDeezNuts.Web**: Blazor Server application with interactive components
+
+### Technology Stack
+- .NET 9.0 with C# 13
+- .NET Aspire 9.3.1 for distributed application orchestration
+- Blazor Server-Side Rendering with interactive components
+- Minimal APIs with OpenAPI/Swagger documentation
+- OpenTelemetry for observability (metrics, tracing, logging)
+- Kubernetes deployment via Aspirate
+- Docker multi-stage builds
+
+### Design Patterns Implementation Goals
+This project aims to demonstrate practical implementation of GoF design patterns in a modern distributed application context, including:
+- Creational patterns (Factory, Builder, Singleton)
+- Structural patterns (Adapter, Decorator, Facade)
+- Behavioral patterns (Observer, Strategy, Command)
+
+Each pattern will be implemented with real-world scenarios that enhance the application's functionality while maintaining clean, maintainable code.

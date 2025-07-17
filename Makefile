@@ -1,4 +1,4 @@
-.PHONY: build run clean restore test publish dev web-dev docker-build-api docker-build-web docker-build k8s-generate k8s-deploy deploy k8s-status k8s-clean setup-tools
+.PHONY: build run clean restore test publish dev web-dev docker-build-api docker-build-web docker-build k8s-generate k8s-deploy deploy k8s-status k8s-clean setup-tools token format
 
 # Default target
 all: restore build
@@ -16,7 +16,7 @@ restore:
 
 # Build the application
 build:
-	dotnet build --no-restore
+	dotnet clean && dotnet build
 
 # Run the application
 run:
@@ -54,24 +54,32 @@ docker-build-web:
 
 docker-build: docker-build-api docker-build-web
 
-# Generate Kubernetes manifests
-k8s-generate:
-	cd src/AspireDeezNuts.AppHost && aspirate generate --project-path . --output-path ./k8s-manifests --non-interactive --disable-secrets --include-dashboard --skip-build --image-pull-policy IfNotPresent
-
 # Deploy to Kubernetes
 k8s-deploy:
-	kubectl apply -k ./src/AspireDeezNuts.AppHost/k8s-manifests/
+	kubectl apply -k ./manifests/
 	kubectl rollout restart deployment/aspire-deez-nuts-api || true
 	kubectl rollout restart deployment/aspire-deez-nuts-web || true
+	kubectl rollout restart deployment/aspire-dashboard || true
+	@echo "Waiting for dashboard to be ready..."
+	@kubectl wait --for=condition=ready pod -l app=aspire-dashboard --timeout=60s
+	@sleep 3
+	@echo "🔐 Dashboard Login Token:"
+	@NEWEST_POD=$$(kubectl get pods -l app=aspire-dashboard --sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1].metadata.name}'); \
+	kubectl logs $$NEWEST_POD | grep "Login to the dashboard" | tail -1 | sed 's/.*?t=//' | sed 's/. The URL.*//'
 
 # Combined deployment
-deploy: docker-build k8s-generate k8s-deploy
+deploy: docker-build k8s-deploy
 
 # Check deployment status
 k8s-status:
 	kubectl get pods,svc,deployments
 
+# Get dashboard login token
+token:
+	@echo "🔐 Dashboard Login Token:"
+	@NEWEST_POD=$$(kubectl get pods -l app=aspire-dashboard --sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1].metadata.name}'); \
+	kubectl logs $$NEWEST_POD --since-time=$$(kubectl get pod $$NEWEST_POD -o jsonpath='{.metadata.creationTimestamp}') | grep "Login to the dashboard" | head -1 | sed 's/.*?t=//' | sed 's/. The URL.*//'
+
 # Clean up Kubernetes resources
 k8s-clean:
-	kubectl delete -k ./src/AspireDeezNuts.AppHost/k8s-manifests/ || true
-	rm -rf ./src/AspireDeezNuts.AppHost/k8s-manifests
+	kubectl delete -k ./manifests/ || true

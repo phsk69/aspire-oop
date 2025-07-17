@@ -2,6 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Developing guidelines
+
+- Always provide null-safe code
+- Always use primary constructors when able
+- Always use async approaches for IO bound operations, and if applicable with proper retry mechanics
+
 ## Common Commands
 
 This project uses a Makefile for common development tasks:
