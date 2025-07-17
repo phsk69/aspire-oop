@@ -2,7 +2,38 @@
 
 ## Basics
 
-- [ ] Get HTTPS working in kubernetes for the apps (certmanager?)
+### Internal HTTPS with Cert-Manager (Rancher Desktop)
+- [ ] Install cert-manager in Rancher Desktop cluster
+  - Apply cert-manager CRDs and controller: `kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml`
+  - Verify installation: `kubectl get pods -n cert-manager`
+
+- [ ] Create internal CA ClusterIssuer
+  - Create self-signed root CA certificate for cluster
+  - Configure CA ClusterIssuer for internal domain certificates (.local, .cluster.local)
+  - All certificates will be cluster-internal only
+
+- [ ] Update application containers for HTTPS
+  - Modify ConfigMap: Set `ASPNETCORE_URLS="https://+:8443;http://+:8080"`
+  - Add Kestrel HTTPS configuration with auto-generated certificates
+  - Mount certificate volumes from cert-manager
+
+- [ ] Create Certificate resources for each service
+  - `aspire-web-tls` certificate for web application
+  - `aspire-api-tls` certificate for API service  
+  - `aspire-dashboard-tls` certificate for dashboard
+  - DNS names: `servicename.default.svc.cluster.local`
+
+- [ ] Update service specifications for dual HTTP/HTTPS
+  - Add port 8443 for HTTPS alongside existing 8080 HTTP
+  - Keep HTTP for health checks, use HTTPS for application traffic
+  - Update service discovery in ConfigMap to prefer HTTPS URLs
+
+- [ ] Configure inter-service communication
+  - Update Web→API communication to use `https://aspire-deez-nuts-api:8443`
+  - Configure certificate validation for internal CA
+  - Set up proper TLS trust chain in containers
+
+**Scope**: Internal cluster communication only, no external routing, Rancher Desktop local development
 
 ## Design Patterns Implementation (GoF Book)
 
