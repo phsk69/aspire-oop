@@ -62,25 +62,29 @@ make dev
 ### Makefile Commands
 
 **Core Development:**
+
 ```bash
 make restore      # Restore NuGet dependencies
-make build        # Build the application
+make build        # Clean and build the application
 make run          # Run the AppHost (main entry point)
 make dev          # Run with hot reload using dotnet watch
-make clean        # Clean build artifacts
-make format       # Format code
+make clean        # Clean build artifacts (removes bin/obj directories)
+make format       # Format code using dotnet format
+make test         # Run tests (when tests are added)
+make publish      # Publish release build to ./publish
 ```
 
 **Container & Kubernetes:**
+
 ```bash
-make docker-build-api    # Build API service container
-make docker-build-web    # Build Web application container
+make docker-build-api    # Build API service container with nerdctl
+make docker-build-web    # Build Web application container with nerdctl
 make docker-build        # Build both containers
-make k8s-generate        # Generate Kubernetes manifests
-make k8s-deploy          # Deploy to Kubernetes
-make deploy              # Full pipeline: build → generate → deploy
-make k8s-status          # Check deployment status
+make k8s-deploy          # Deploy to Kubernetes (applies manifests and shows token)
+make deploy              # Full pipeline: docker-build → k8s-deploy
+make k8s-status          # Check deployment status (pods, services, deployments)
 make k8s-clean           # Clean up Kubernetes resources
+make token               # Get Aspire dashboard login token
 ```
 
 ### Running Individual Projects
@@ -122,6 +126,88 @@ make deploy  # Builds containers, generates manifests, and deploys
 ```
 
 This uses the Aspirate tool to convert Aspire configuration into Kubernetes manifests automatically.
+
+## Kubernetes Manifests
+
+The `manifests/` directory contains Kubernetes deployment specifications for all services:
+
+### Core Application Services
+```bash
+manifests/
+├── api-service.yaml      # API service deployment and service
+├── web-service.yaml      # Web application deployment and service  
+├── dashboard.yaml        # Aspire dashboard deployment and service
+├── configmap.yaml        # Environment configuration
+├── secret.yaml           # Sensitive configuration (template)
+├── pvc.yaml             # Persistent volume claims for data storage
+└── kustomization.yaml   # Kustomize resource aggregation
+```
+
+### Deployment Examples
+
+**API Service Structure:**
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-api-service
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+        - name: api
+          image: my-api:latest
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: app-config
+            - secretRef:
+                name: app-secrets
+```
+
+**Service Configuration:**
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-api-service
+spec:
+  selector:
+    app: my-api-service
+  ports:
+    - port: 8080
+      targetPort: 8080
+```
+
+**ConfigMap Pattern:**
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+data:
+  ASPNETCORE_URLS: "http://+:8080"
+  DEPLOYMENT_ENVIRONMENT: "Kubernetes"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://dashboard:18889"
+```
+
+### Resource Management
+
+- **Memory**: 256Mi requests, 512Mi limits for standard services
+- **CPU**: 100m requests, 500m limits for standard services  
+- **Storage**: Persistent volumes for DataProtection keys and application data
+- **Configuration**: External configuration via ConfigMaps and Secrets
+
+### Health Checks
+
+All services expose health endpoints compatible with Kubernetes:
+- `/health` - Readiness probe
+- `/alive` - Liveness probe
 
 ## Project Architecture
 
