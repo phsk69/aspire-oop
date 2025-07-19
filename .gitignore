@@ -135,9 +135,8 @@ _NCrunch*
 # User-specific files
 .claude/*
 
-# Aspire and Kubernetes artifacts
-**/k8s-manifests/
-**/manifests/
+# Kubernetes artifacts
+**/manifests/secret.yaml
 aspirate-state.json
 manifest.json
 publish/

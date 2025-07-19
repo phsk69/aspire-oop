@@ -7,6 +7,11 @@ namespace AspireDeezNuts.ApiService.Controllers;
 [Route("api/v1/[controller]")]
 public class PostsController(HttpClient httpClient, ILogger<PostsController> logger) : ControllerBase
 {
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
     [HttpGet]
     public async Task<ActionResult<IEnumerable<Post>>> GetPosts()
     {
@@ -18,14 +23,11 @@ public class PostsController(HttpClient httpClient, ILogger<PostsController> log
             response.EnsureSuccessStatusCode();
             
             var jsonContent = await response.Content.ReadAsStringAsync();
-            var posts = JsonSerializer.Deserialize<Post[]>(jsonContent, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+            var posts = JsonSerializer.Deserialize<Post[]>(jsonContent, JsonOptions);
 
             logger.LogInformation("Successfully fetched {PostCount} posts", posts?.Length ?? 0);
             
-            return Ok(posts ?? Array.Empty<Post>());
+            return Ok(posts ?? []);
         }
         catch (HttpRequestException ex)
         {
@@ -56,10 +58,7 @@ public class PostsController(HttpClient httpClient, ILogger<PostsController> log
             response.EnsureSuccessStatusCode();
             
             var jsonContent = await response.Content.ReadAsStringAsync();
-            var post = JsonSerializer.Deserialize<Post>(jsonContent, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+            var post = JsonSerializer.Deserialize<Post>(jsonContent, JsonOptions);
 
             logger.LogInformation("Successfully fetched post {PostId}", id);
             

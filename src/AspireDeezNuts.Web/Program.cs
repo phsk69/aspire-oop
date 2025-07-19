@@ -1,5 +1,4 @@
 using AspireDeezNuts.Web.Components;
-
 var builder = WebApplication.CreateBuilder(args);
 
 // Add service defaults & Aspire client integrations.
@@ -18,8 +17,8 @@ builder.Services.AddHttpClient("apiservice", client =>
     
     if (deploymentEnv == "Kubernetes")
     {
-        // Kubernetes deployment: use HTTP service discovery (HTTPS not working in K8s yet)
-        client.BaseAddress = new Uri("http://aspire-deez-nuts-api:8080");
+        var apiBaseUrl = builder.Configuration["API_BASE_URL"] ?? throw new InvalidOperationException("API_BASE_URL configuration is required for Kubernetes deployment.");
+        client.BaseAddress = new Uri(apiBaseUrl);
     }
     else
     {
