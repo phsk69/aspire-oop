@@ -2,11 +2,6 @@
 
 ## Basics
 
-### Non-root containers
-
-- [ ] Ensure that the Web service uses a non-root container
-- [ ] Ensure that the API service uses a non-root container
-
 ### Complete the TLS setup
 
 - [ ] Find a proper way of trusting cert-manager CA's in dotnet containers so we can do https based service discovery

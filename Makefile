@@ -1,4 +1,4 @@
-.PHONY: build run clean restore test publish dev web-dev docker-build-api docker-build-web docker-build k8s-generate k8s-deploy deploy k8s-status k8s-clean setup-tools token format
+.PHONY: build run clean restore test publish dev web-dev docker-build-api docker-build-web docker-build k8s-generate k8s-deploy deploy k8s-status k8s-clean setup-tools token format shell-api shell-web
 
 # Default target
 all: restore build
@@ -83,3 +83,27 @@ token:
 # Clean up Kubernetes resources
 k8s-clean:
 	kubectl delete -k ./manifests/ || true
+
+# Connect to API service container shell
+shell-api:
+	@echo "🔗 Connecting to API service container..."
+	@API_POD=$$(kubectl get pods -l app=aspire-deez-nuts-api -o jsonpath='{.items[0].metadata.name}' 2>/dev/null); \
+	if [ -z "$$API_POD" ]; then \
+		echo "❌ No API service pods found. Is the deployment running?"; \
+		echo "Run 'make k8s-status' to check pod status"; \
+		exit 1; \
+	fi; \
+	echo "📡 Connecting to pod: $$API_POD"; \
+	kubectl exec -it $$API_POD -- /bin/bash
+
+# Connect to Web service container shell
+shell-web:
+	@echo "🔗 Connecting to Web service container..."
+	@WEB_POD=$$(kubectl get pods -l app=aspire-deez-nuts-web -o jsonpath='{.items[0].metadata.name}' 2>/dev/null); \
+	if [ -z "$$WEB_POD" ]; then \
+		echo "❌ No Web service pods found. Is the deployment running?"; \
+		echo "Run 'make k8s-status' to check pod status"; \
+		exit 1; \
+	fi; \
+	echo "📡 Connecting to pod: $$WEB_POD"; \
+	kubectl exec -it $$WEB_POD -- /bin/bash
