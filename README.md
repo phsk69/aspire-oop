@@ -19,6 +19,7 @@ A .NET Aspire distributed application demonstrating object-oriented design patte
    - Enable container engine integration
 
 This provides:
+
 - Local Kubernetes cluster
 - nerdctl for container builds (Docker-compatible CLI)
 - kubectl for cluster management

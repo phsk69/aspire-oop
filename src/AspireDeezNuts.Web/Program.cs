@@ -22,8 +22,19 @@ builder.Services.AddHttpClient("apiservice", client =>
     }
     else
     {
-        // Local debugging: use deterministic localhost URL with HTTPS
-        client.BaseAddress = new Uri("https://localhost:7201");
+        // When running with Aspire, service discovery will provide the URL
+        // Otherwise fall back to direct URL
+        var serviceUrl = builder.Configuration.GetConnectionString("aspire-deez-nuts-api");
+        if (!string.IsNullOrEmpty(serviceUrl))
+        {
+            // Running with Aspire orchestration
+            client.BaseAddress = new Uri(serviceUrl);
+        }
+        else
+        {
+            // Running standalone - use HTTP since Aspire only exposes HTTP
+            client.BaseAddress = new Uri("http://localhost:5137");
+        }
     }
 });
 
