@@ -45,10 +45,12 @@ format:
 
 # Docker build commands (using names that match generated manifests)
 docker-build-api:
+	@echo "Building API service..."
 	nerdctl build -t aspire-deez-nuts-api:latest -f src/AspireDeezNuts.ApiService/Dockerfile .
 	nerdctl save aspire-deez-nuts-api:latest | nerdctl --namespace k8s.io load
 
 docker-build-web:
+	@echo "Building Web service..."
 	nerdctl build -t aspire-deez-nuts-web:latest -f src/AspireDeezNuts.Web/Dockerfile .
 	nerdctl save aspire-deez-nuts-web:latest | nerdctl --namespace k8s.io load
 

@@ -1,7 +1,7 @@
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
 WORKDIR /app
 EXPOSE 8080
-EXPOSE 8081
+EXPOSE 8443
 
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
@@ -30,11 +30,22 @@ RUN dotnet publish "AspireDeezNuts.Web.csproj" -c $BUILD_CONFIGURATION -o /app/p
 FROM base AS final
 WORKDIR /app
 
-# Create non-root user
-RUN adduser --disabled-password --gecos '' --uid 1001 appuser && \
-    chown -R appuser:appuser /app
+# Install ca-certificates for HTTPS support
+RUN apt-get update && \
+    apt-get install -y ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
 
-COPY --from=publish --chown=appuser:appuser /app/publish .
+COPY --from=publish /app/publish .
 
-USER appuser
-ENTRYPOINT ["dotnet", "AspireDeezNuts.Web.dll"]
+# Script to trust cert-manager CA at runtime
+RUN echo '#!/bin/bash\n\
+if [ -f /tls/ca.crt ]; then\n\
+    cp /tls/ca.crt /usr/local/share/ca-certificates/cert-manager-ca.crt\n\
+    update-ca-certificates\n\
+    echo "Cert-manager CA certificate installed and trusted"\n\
+fi\n\
+exec dotnet AspireDeezNuts.Web.dll' > /entrypoint.sh && \
+    chmod +x /entrypoint.sh
+
+# Run as root for simplified certificate access
+ENTRYPOINT ["/entrypoint.sh"]
