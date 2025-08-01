@@ -17,6 +17,9 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddHttpClient();
 builder.Services.AddControllers();
 
+// Add repository
+builder.Services.AddScoped<AspireDeezNuts.Shared.Interfaces.IPostRepository, AspireDeezNuts.ApiService.Repositories.PostRepository>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

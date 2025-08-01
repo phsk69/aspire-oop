@@ -8,6 +8,7 @@
     <Project Path="src/AspireDeezNuts.ApiService/AspireDeezNuts.ApiService.csproj" />
     <Project Path="src/AspireDeezNuts.AppHost/AspireDeezNuts.AppHost.csproj" />
     <Project Path="src/AspireDeezNuts.ServiceDefaults/AspireDeezNuts.ServiceDefaults.csproj" />
+    <Project Path="src/AspireDeezNuts.Shared/AspireDeezNuts.Shared.csproj" />
     <Project Path="src/AspireDeezNuts.Web/AspireDeezNuts.Web.csproj" />
   </Folder>
 </Solution>

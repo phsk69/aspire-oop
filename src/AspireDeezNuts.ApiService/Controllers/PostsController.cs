@@ -1,80 +1,92 @@
 using Microsoft.AspNetCore.Mvc;
-using System.Text.Json;
+using AspireDeezNuts.Shared.Interfaces;
+using AspireDeezNuts.Shared.Models;
 
 namespace AspireDeezNuts.ApiService.Controllers;
 
 [ApiController]
 [Route("api/v1/[controller]")]
-public class PostsController(HttpClient httpClient, ILogger<PostsController> logger) : ControllerBase
+public class PostsController(IPostRepository postRepository, ILogger<PostsController> logger) : ControllerBase
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true
-    };
+    private readonly IPostRepository _postRepository = postRepository;
+    private readonly ILogger<PostsController> _logger = logger;
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Post>>> GetPosts()
+    public ActionResult<IEnumerable<Post>> GetPosts()
     {
         try
         {
-            logger.LogInformation("Fetching posts from JSONPlaceholder API");
-            
-            var response = await httpClient.GetAsync("https://jsonplaceholder.typicode.com/posts");
-            response.EnsureSuccessStatusCode();
-            
-            var jsonContent = await response.Content.ReadAsStringAsync();
-            var posts = JsonSerializer.Deserialize<Post[]>(jsonContent, JsonOptions);
-
-            logger.LogInformation("Successfully fetched {PostCount} posts", posts?.Length ?? 0);
-            
-            return Ok(posts ?? []);
+            _logger.LogInformation("Fetching all posts");
+            var posts = _postRepository.Read();
+            _logger.LogInformation("Successfully fetched {PostCount} posts", posts.Count);
+            return Ok(posts);
         }
-        catch (HttpRequestException ex)
+        catch (Exception ex)
         {
-            logger.LogError(ex, "Error fetching posts from external API");
-            return StatusCode(500, "Failed to fetch posts from external service");
-        }
-        catch (JsonException ex)
-        {
-            logger.LogError(ex, "Error parsing JSON response from external API");
-            return StatusCode(500, "Failed to parse response from external service");
+            _logger.LogError(ex, "Error fetching posts");
+            return StatusCode(500, "Failed to fetch posts");
         }
     }
 
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<Post>> GetPost(int id)
+    public ActionResult<Post> GetPost(int id)
     {
         try
         {
-            logger.LogInformation("Fetching post {PostId} from JSONPlaceholder API", id);
+            _logger.LogInformation("Fetching post {PostId}", id);
+            var post = _postRepository.ReadById(id);
             
-            var response = await httpClient.GetAsync($"https://jsonplaceholder.typicode.com/posts/{id}");
-            
-            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            if (post == null)
             {
                 return NotFound($"Post with ID {id} not found");
             }
             
-            response.EnsureSuccessStatusCode();
-            
-            var jsonContent = await response.Content.ReadAsStringAsync();
-            var post = JsonSerializer.Deserialize<Post>(jsonContent, JsonOptions);
-
-            logger.LogInformation("Successfully fetched post {PostId}", id);
-            
+            _logger.LogInformation("Successfully fetched post {PostId}", id);
             return Ok(post);
         }
-        catch (HttpRequestException ex)
+        catch (Exception ex)
         {
-            logger.LogError(ex, "Error fetching post {PostId} from external API", id);
-            return StatusCode(500, "Failed to fetch post from external service");
+            _logger.LogError(ex, "Error fetching post {PostId}", id);
+            return StatusCode(500, "Failed to fetch post");
         }
-        catch (JsonException ex)
+    }
+
+    [HttpGet("user/{userId:int}")]
+    public ActionResult<IEnumerable<Post>> GetPostsByUser(int userId)
+    {
+        try
         {
-            logger.LogError(ex, "Error parsing JSON response for post {PostId}", id);
-            return StatusCode(500, "Failed to parse response from external service");
+            _logger.LogInformation("Fetching posts for user {UserId}", userId);
+            var posts = _postRepository.GetByUserId(userId);
+            _logger.LogInformation("Successfully fetched {PostCount} posts for user {UserId}", posts.Count, userId);
+            return Ok(posts);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching posts for user {UserId}", userId);
+            return StatusCode(500, "Failed to fetch posts");
+        }
+    }
+
+    [HttpGet("search")]
+    public ActionResult<IEnumerable<Post>> SearchPosts([FromQuery] string title)
+    {
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            return BadRequest("Title search parameter is required");
+        }
+
+        try
+        {
+            _logger.LogInformation("Searching posts with title containing '{Title}'", title);
+            var posts = _postRepository.GetByTitle(title);
+            _logger.LogInformation("Found {PostCount} posts matching '{Title}'", posts.Count, title);
+            return Ok(posts);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error searching posts with title '{Title}'", title);
+            return StatusCode(500, "Failed to search posts");
         }
     }
 }
-
-public record Post(int Id, int UserId, string Title, string Body);

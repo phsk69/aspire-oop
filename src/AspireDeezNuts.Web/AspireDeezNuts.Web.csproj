@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AspireDeezNuts.ServiceDefaults\AspireDeezNuts.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\AspireDeezNuts.Shared\AspireDeezNuts.Shared.csproj" />
   </ItemGroup>
 
 </Project>

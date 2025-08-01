@@ -1,7 +1,9 @@
 @page "/posts"
 @using System.Text.Json
+@using AspireDeezNuts.Shared.Models
 @inject IHttpClientFactory HttpClientFactory
 @inject ILogger<Posts> Logger
+@rendermode InteractiveServer
 
 <PageTitle>Posts</PageTitle>
 
@@ -26,14 +28,24 @@ else if (!posts.Any())
 }
 else
 {
-    <div class="mb-3">
+    <div class="mb-3 d-flex justify-content-between align-items-center">
         <Badge Color="BadgeColor.Info">
             Total Posts: @posts.Count()
         </Badge>
+        
+        <div class="d-flex align-items-center gap-2">
+            <label class="me-2">Posts per page:</label>
+            <select class="form-select form-select-sm" style="width: auto;" @onchange="OnPageSizeChanged">
+                @for (int size = 5; size <= 50; size += 5)
+                {
+                    <option value="@size" selected="@(pageSize == size)">@size</option>
+                }
+            </select>
+        </div>
     </div>
 
     <div class="row">
-        @foreach (var post in posts)
+        @foreach (var post in paginatedPosts)
         {
             <div class="col-md-6 col-lg-4 mb-3">
                 <Card>
@@ -63,6 +75,17 @@ else
             </div>
         }
     </div>
+
+    <div class="d-flex justify-content-center mt-4">
+        <Pagination ActivePageNumber="@currentPage"
+                    TotalPages="@totalPages"
+                    PageChanged="@OnPageChanged"
+                    DisplayPages="5"
+                    FirstLinkIcon="IconName.ChevronDoubleLeft"
+                    PreviousLinkIcon="IconName.ChevronLeft"
+                    NextLinkIcon="IconName.ChevronRight"
+                    LastLinkIcon="IconName.ChevronDoubleRight" />
+    </div>
 }
 
 @if (selectedPost != null)
@@ -85,6 +108,10 @@ else
     private Post[]? posts;
     private Post? selectedPost;
     private Modal modal = default!;
+    private int currentPage = 1;
+    private int pageSize = 10;
+    private int totalPages => posts != null ? (int)Math.Ceiling((double)posts.Length / pageSize) : 0;
+    private IEnumerable<Post> paginatedPosts => posts?.Skip((currentPage - 1) * pageSize).Take(pageSize) ?? Enumerable.Empty<Post>();
 
     protected override async Task OnInitializedAsync()
     {
@@ -133,5 +160,19 @@ else
         await modal.HideAsync();
     }
 
-    public record Post(int Id, int UserId, string Title, string Body);
+    private async Task OnPageChanged(int newPageNumber)
+    {
+        currentPage = newPageNumber;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnPageSizeChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var newPageSize))
+        {
+            pageSize = newPageSize;
+            currentPage = 1; // Reset to first page when changing page size
+            await InvokeAsync(StateHasChanged);
+        }
+    }
 }
