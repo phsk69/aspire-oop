@@ -12,9 +12,9 @@
 
 - [x] Create `IPostRepository` interface for data access abstraction
   - Defines contract for post data operations, enabling dependency inversion
-- [ ] Implement `JsonPlaceholderPostRepository` (current external API)
+- [x] Implement `JsonPlaceholderPostRepository` (current external API)
   - Encapsulates current HTTP API calls, making external dependency explicit
-- [ ] Implement `MockPostRepository` for testing/demo
+- [ ] Implement `MockPostRepository` for testing/demo (use the in-mem DB)
   - Provides in-memory data for development/testing without external dependencies
   - Demonstrates strategy pattern - same interface, different behavior
 - [ ] Create `IPostRepositoryFactory` interface

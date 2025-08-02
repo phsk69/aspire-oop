@@ -1,0 +1,36 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@inject NavigationManager Navigation
+@inject ILogger<LoginDisplay> Logger
+@rendermode InteractiveServer
+
+<AuthorizeView>
+    <Authorized>
+        <div class="d-flex align-items-center">
+            <span class="me-3">Hello, @context.User.Identity?.Name!</span>
+            <Button Color="ButtonColor.Light" Size="ButtonSize.Small" @onclick="LogoutAsync">
+                <Icon Name="IconName.BoxArrowRight" class="me-1" />
+                Logout
+            </Button>
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <Button Color="ButtonColor.Primary" Size="ButtonSize.Small" @onclick="Login">
+            <Icon Name="IconName.BoxArrowInRight" class="me-1" />
+            Login
+        </Button>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private void LogoutAsync()
+    {
+        Logger.LogInformation("Starting logout process...");
+        Navigation.NavigateTo("/logout", forceLoad: true);
+    }
+
+    private void Login()
+    {
+        Logger.LogInformation("Login button clicked, navigating to /login");
+        Navigation.NavigateTo("/login");
+    }
+}

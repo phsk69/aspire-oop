@@ -1,4 +1,11 @@
 using AspireDeezNuts.Web.Components;
+using AspireDeezNuts.Web.Services;
+using AspireDeezNuts.Web.Models;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication;
+using System.Security.Claims;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add service defaults & Aspire client integrations.
@@ -7,14 +14,35 @@ builder.AddServiceDefaults();
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
-
 builder.Services.AddBlazorBootstrap();
 
+// Add authentication services - Microsoft recommended approach
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.Cookie.Name = "BlazorServerAuth";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.LoginPath = "/login";
+        options.LogoutPath = "/logout";
+        options.AccessDeniedPath = "/login";
+        options.ExpireTimeSpan = TimeSpan.FromHours(1);
+        options.SlidingExpiration = true;
+    });
+builder.Services.AddAuthorizationCore();
+builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddHttpContextAccessor();
+
+// Simple auth service for API calls only
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<AuthorizedHttpMessageHandler>();
+
 // Add HttpClient for the API - configured for both local debugging and Kubernetes deployment
-builder.Services.AddHttpClient("apiservice", client =>
+builder.Services.AddHttpClient<IAuthService, AuthService>("apiservice", client =>
 {
     var deploymentEnv = builder.Configuration["DEPLOYMENT_ENVIRONMENT"];
-    
+
     if (deploymentEnv == "Kubernetes")
     {
         var apiBaseUrl = builder.Configuration["API_BASE_URL"] ?? throw new InvalidOperationException("API_BASE_URL configuration is required for Kubernetes deployment.");
@@ -38,6 +66,30 @@ builder.Services.AddHttpClient("apiservice", client =>
     }
 });
 
+// Add authenticated HttpClient for API calls
+builder.Services.AddHttpClient("authenticated-api", client =>
+{
+    var deploymentEnv = builder.Configuration["DEPLOYMENT_ENVIRONMENT"];
+
+    if (deploymentEnv == "Kubernetes")
+    {
+        var apiBaseUrl = builder.Configuration["API_BASE_URL"] ?? throw new InvalidOperationException("API_BASE_URL configuration is required for Kubernetes deployment.");
+        client.BaseAddress = new Uri(apiBaseUrl);
+    }
+    else
+    {
+        var serviceUrl = builder.Configuration.GetConnectionString("aspire-deez-nuts-api");
+        if (!string.IsNullOrEmpty(serviceUrl))
+        {
+            client.BaseAddress = new Uri(serviceUrl);
+        }
+        else
+        {
+            client.BaseAddress = new Uri("http://localhost:5137");
+        }
+    }
+}).AddHttpMessageHandler<AuthorizedHttpMessageHandler>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -50,7 +102,49 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.UseAntiforgery();
+
+// Add login endpoint 
+app.MapPost("/api/login", async (HttpContext context, IAuthService authService) =>
+{
+    var form = await context.Request.ReadFormAsync();
+    var email = form["Email"].ToString();
+    var password = form["Password"].ToString();
+    
+    var result = await authService.LoginAsync(email, password);
+    
+    if (result.Success)
+    {
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.Name, email),
+            new Claim(ClaimTypes.Email, email)
+        };
+
+        var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+        await context.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(claimsIdentity));
+        
+        return Results.Redirect("/");
+    }
+    
+    return Results.Redirect("/login?error=Invalid credentials");
+});
+
+app.MapPost("/api/logout", async (HttpContext context) =>
+{
+    await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+    return Results.Redirect("/");
+});
+
+// Also support GET for direct navigation
+app.MapGet("/logout", async (HttpContext context) =>
+{
+    await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+    return Results.Redirect("/");
+});
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()

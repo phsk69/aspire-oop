@@ -43,6 +43,7 @@ data:
   OTEL_LOGS_EXPORTER: "otlp"
   DEPLOYMENT_ENVIRONMENT: "Kubernetes"
   DOTNET_SYSTEM_NET_HTTP_USESOCKETSHTTPHANDLER: "false"
+  UseInMemoryDatabase: "true"
 ---
 apiVersion: v1
 kind: ConfigMap

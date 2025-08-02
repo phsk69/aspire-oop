@@ -3,6 +3,7 @@
 @using AspireDeezNuts.Shared.Models
 @inject IHttpClientFactory HttpClientFactory
 @inject ILogger<Posts> Logger
+@attribute [Authorize]
 @rendermode InteractiveServer
 
 <PageTitle>Posts</PageTitle>

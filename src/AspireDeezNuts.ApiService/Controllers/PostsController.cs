@@ -35,12 +35,12 @@ public class PostsController(IPostRepository postRepository, ILogger<PostsContro
         {
             _logger.LogInformation("Fetching post {PostId}", id);
             var post = await _postRepository.ReadByIdAsync(id);
-            
+
             if (post == null)
             {
                 return NotFound($"Post with ID {id} not found");
             }
-            
+
             _logger.LogInformation("Successfully fetched post {PostId}", id);
             return Ok(post);
         }

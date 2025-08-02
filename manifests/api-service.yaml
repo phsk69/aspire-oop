@@ -38,6 +38,8 @@ spec:
           envFrom:
             - secretRef:
                 name: aspire-these-nutz
+            - secretRef:
+                name: aspire-jwt-secret
             - configMapRef:
                 name: aspire-api-config
           env:

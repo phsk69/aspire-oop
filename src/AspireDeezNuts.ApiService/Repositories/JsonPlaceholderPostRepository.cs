@@ -8,7 +8,6 @@ public class JsonPlaceholderPostRepository(HttpClient httpClient, ILogger<JsonPl
 {
     private readonly HttpClient _httpClient = httpClient;
     private readonly ILogger<JsonPlaceholderPostRepository> _logger = logger;
-    private readonly JsonPlaceholderOptions _options = options.Value;
     private readonly string _apiUrl = $"{options.Value.BaseUrl}/posts";
 
     public async Task<List<Post>> ReadAsync()
@@ -41,17 +40,17 @@ public class JsonPlaceholderPostRepository(HttpClient httpClient, ILogger<JsonPl
     }
 
 
-    public async Task<Post> CreateAsync(Post entity)
+    public Task<Post> CreateAsync(Post entity)
     {
         throw new NotImplementedException("This is a read-only repository for demo purposes");
     }
 
-    public async Task<Post> UpdateAsync(Post entity)
+    public Task<Post> UpdateAsync(Post entity)
     {
         throw new NotImplementedException("This is a read-only repository for demo purposes");
     }
 
-    public async Task<Post> DeleteAsync(Post entity)
+    public Task<Post> DeleteAsync(Post entity)
     {
         throw new NotImplementedException("This is a read-only repository for demo purposes");
     }
