@@ -4,13 +4,13 @@
 
 ### Complete the TLS setup
 
-- [ ] Find a proper way of trusting cert-manager CA's in dotnet containers so we can do https based service discovery
+- [x] Find a proper way of trusting cert-manager CA's in dotnet containers so we can do https based service discovery
 
 ## Design Patterns Implementation (GoF Book)
 
 ### Next: Repository Pattern with Abstract Factory
 
-- [ ] Create `IPostRepository` interface for data access abstraction
+- [x] Create `IPostRepository` interface for data access abstraction
   - Defines contract for post data operations, enabling dependency inversion
 - [ ] Implement `JsonPlaceholderPostRepository` (current external API)
   - Encapsulates current HTTP API calls, making external dependency explicit

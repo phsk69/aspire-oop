@@ -17,8 +17,20 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddHttpClient();
 builder.Services.AddControllers();
 
-// Add repository
-builder.Services.AddScoped<AspireDeezNuts.Shared.Interfaces.IPostRepository, AspireDeezNuts.ApiService.Repositories.PostRepository>();
+// Configure JsonPlaceholder options
+builder.Services.Configure<AspireDeezNuts.ApiService.Repositories.JsonPlaceholderOptions>(
+    builder.Configuration.GetSection("ExternalApis:JsonPlaceholder"));
+
+// Add repository with configured HttpClient
+builder.Services.AddHttpClient<AspireDeezNuts.Shared.Interfaces.IPostRepository, AspireDeezNuts.ApiService.Repositories.JsonPlaceholderPostRepository>((serviceProvider, client) =>
+{
+    var configuration = serviceProvider.GetRequiredService<IConfiguration>();
+    var baseUrl = configuration["ExternalApis:JsonPlaceholder:BaseUrl"] ?? "https://jsonplaceholder.typicode.com";
+    var timeout = configuration.GetValue<int>("ExternalApis:JsonPlaceholder:Timeout", 30);
+    
+    client.BaseAddress = new Uri(baseUrl);
+    client.Timeout = TimeSpan.FromSeconds(timeout);
+});
 
 var app = builder.Build();
 

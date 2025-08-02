@@ -12,12 +12,12 @@ public class PostsController(IPostRepository postRepository, ILogger<PostsContro
     private readonly ILogger<PostsController> _logger = logger;
 
     [HttpGet]
-    public ActionResult<IEnumerable<Post>> GetPosts()
+    public async Task<ActionResult<IEnumerable<Post>>> GetPosts()
     {
         try
         {
             _logger.LogInformation("Fetching all posts");
-            var posts = _postRepository.Read();
+            var posts = await _postRepository.ReadAsync();
             _logger.LogInformation("Successfully fetched {PostCount} posts", posts.Count);
             return Ok(posts);
         }
@@ -29,12 +29,12 @@ public class PostsController(IPostRepository postRepository, ILogger<PostsContro
     }
 
     [HttpGet("{id:int}")]
-    public ActionResult<Post> GetPost(int id)
+    public async Task<ActionResult<Post>> GetPost(int id)
     {
         try
         {
             _logger.LogInformation("Fetching post {PostId}", id);
-            var post = _postRepository.ReadById(id);
+            var post = await _postRepository.ReadByIdAsync(id);
             
             if (post == null)
             {
@@ -52,12 +52,12 @@ public class PostsController(IPostRepository postRepository, ILogger<PostsContro
     }
 
     [HttpGet("user/{userId:int}")]
-    public ActionResult<IEnumerable<Post>> GetPostsByUser(int userId)
+    public async Task<ActionResult<IEnumerable<Post>>> GetPostsByUser(int userId)
     {
         try
         {
             _logger.LogInformation("Fetching posts for user {UserId}", userId);
-            var posts = _postRepository.GetByUserId(userId);
+            var posts = await _postRepository.GetByUserIdAsync(userId);
             _logger.LogInformation("Successfully fetched {PostCount} posts for user {UserId}", posts.Count, userId);
             return Ok(posts);
         }
@@ -69,7 +69,7 @@ public class PostsController(IPostRepository postRepository, ILogger<PostsContro
     }
 
     [HttpGet("search")]
-    public ActionResult<IEnumerable<Post>> SearchPosts([FromQuery] string title)
+    public async Task<ActionResult<IEnumerable<Post>>> SearchPosts([FromQuery] string title)
     {
         if (string.IsNullOrWhiteSpace(title))
         {
@@ -79,7 +79,7 @@ public class PostsController(IPostRepository postRepository, ILogger<PostsContro
         try
         {
             _logger.LogInformation("Searching posts with title containing '{Title}'", title);
-            var posts = _postRepository.GetByTitle(title);
+            var posts = await _postRepository.GetByTitleAsync(title);
             _logger.LogInformation("Found {PostCount} posts matching '{Title}'", posts.Count, title);
             return Ok(posts);
         }

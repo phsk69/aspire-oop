@@ -1,13 +1,15 @@
 using AspireDeezNuts.Shared.Interfaces;
 using AspireDeezNuts.Shared.Models;
+using Microsoft.Extensions.Options;
 
 namespace AspireDeezNuts.ApiService.Repositories;
 
-public class PostRepository(HttpClient httpClient, ILogger<PostRepository> logger) : IPostRepository
+public class JsonPlaceholderPostRepository(HttpClient httpClient, ILogger<JsonPlaceholderPostRepository> logger, IOptions<JsonPlaceholderOptions> options) : IPostRepository
 {
     private readonly HttpClient _httpClient = httpClient;
-    private readonly ILogger<PostRepository> _logger = logger;
-    private readonly string _apiUrl = "https://jsonplaceholder.typicode.com/posts";
+    private readonly ILogger<JsonPlaceholderPostRepository> _logger = logger;
+    private readonly JsonPlaceholderOptions _options = options.Value;
+    private readonly string _apiUrl = $"{options.Value.BaseUrl}/posts";
 
     public async Task<List<Post>> ReadAsync()
     {
@@ -23,10 +25,6 @@ public class PostRepository(HttpClient httpClient, ILogger<PostRepository> logge
         }
     }
 
-    public List<Post> Read()
-    {
-        return ReadAsync().GetAwaiter().GetResult();
-    }
 
     public async Task<Post?> ReadByIdAsync(long id)
     {
@@ -42,36 +40,37 @@ public class PostRepository(HttpClient httpClient, ILogger<PostRepository> logge
         }
     }
 
-    public Post ReadById(long id)
-    {
-        var post = ReadByIdAsync(id).GetAwaiter().GetResult();
-        return post ?? throw new InvalidOperationException($"Post with ID {id} not found");
-    }
 
-    public Post Create(Post entity)
+    public async Task<Post> CreateAsync(Post entity)
     {
         throw new NotImplementedException("This is a read-only repository for demo purposes");
     }
 
-    public Post Update(Post entity)
+    public async Task<Post> UpdateAsync(Post entity)
     {
         throw new NotImplementedException("This is a read-only repository for demo purposes");
     }
 
-    public Post Delete(Post entity)
+    public async Task<Post> DeleteAsync(Post entity)
     {
         throw new NotImplementedException("This is a read-only repository for demo purposes");
     }
 
-    public List<Post> GetByUserId(long userId)
+    public async Task<List<Post>> GetByUserIdAsync(long userId)
     {
-        var allPosts = Read();
+        var allPosts = await ReadAsync();
         return [.. allPosts.Where(p => p.UserId == userId)];
     }
 
-    public List<Post> GetByTitle(string titleSearch)
+    public async Task<List<Post>> GetByTitleAsync(string titleSearch)
     {
-        var allPosts = Read();
+        var allPosts = await ReadAsync();
         return [.. allPosts.Where(p => p.Title.Contains(titleSearch, StringComparison.OrdinalIgnoreCase))];
     }
+}
+
+public class JsonPlaceholderOptions
+{
+    public string BaseUrl { get; set; } = "https://jsonplaceholder.typicode.com";
+    public int Timeout { get; set; } = 30;
 }

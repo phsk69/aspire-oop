@@ -36,10 +36,10 @@ else
         <div class="d-flex align-items-center gap-2">
             <label class="me-2">Posts per page:</label>
             <select class="form-select form-select-sm" style="width: auto;" @onchange="OnPageSizeChanged">
-                @for (int size = 5; size <= 50; size += 5)
-                {
-                    <option value="@size" selected="@(pageSize == size)">@size</option>
-                }
+                <option value="10" selected="@(pageSize == 10)">10</option>
+                <option value="25" selected="@(pageSize == 25)">25</option>
+                <option value="50" selected="@(pageSize == 50)">50</option>
+                <option value="100" selected="@(pageSize == 100)">100</option>
             </select>
         </div>
     </div>

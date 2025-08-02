@@ -2,9 +2,9 @@ namespace AspireDeezNuts.Shared.Interfaces;
 
 public interface IRepository<T, K>
 {
-    List<T> Read();
-    T ReadById(K id);
-    T Create(T entity);
-    T Update(T entity);
-    T Delete(T entity);
+    Task<List<T>> ReadAsync();
+    Task<T?> ReadByIdAsync(K id);
+    Task<T> CreateAsync(T entity);
+    Task<T> UpdateAsync(T entity);
+    Task<T> DeleteAsync(T entity);
 }
