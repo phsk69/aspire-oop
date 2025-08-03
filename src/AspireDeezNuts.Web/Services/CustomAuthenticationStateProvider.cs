@@ -37,7 +37,7 @@ public class CustomAuthenticationStateProvider(IAuthService authService, ILogger
         }
     }
 
-    public async Task NotifyUserAuthenticationAsync(string? token)
+    public Task NotifyUserAuthenticationAsync(string? token)
     {
         try
         {
@@ -65,9 +65,11 @@ public class CustomAuthenticationStateProvider(IAuthService authService, ILogger
         {
             _logger.LogError(ex, "Error notifying authentication state change");
         }
+
+        return Task.CompletedTask;
     }
 
-    public async Task NotifyUserLogoutAsync()
+    public Task NotifyUserLogoutAsync()
     {
         try
         {
@@ -80,9 +82,11 @@ public class CustomAuthenticationStateProvider(IAuthService authService, ILogger
         {
             _logger.LogError(ex, "Error notifying logout");
         }
+
+        return Task.CompletedTask;
     }
 
-    private IEnumerable<Claim> ParseClaimsFromJwt(string jwt)
+    private static IEnumerable<Claim> ParseClaimsFromJwt(string jwt)
     {
         var handler = new JwtSecurityTokenHandler();
         var token = handler.ReadJwtToken(jwt);

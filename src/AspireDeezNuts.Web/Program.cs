@@ -1,10 +1,11 @@
 using AspireDeezNuts.Web.Components;
 using AspireDeezNuts.Web.Services;
-using AspireDeezNuts.Web.Models;
+using AspireDeezNuts.Shared.Models;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication;
 using System.Security.Claims;
+using System.ComponentModel.DataAnnotations;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -111,17 +112,31 @@ app.UseAntiforgery();
 app.MapPost("/api/login", async (HttpContext context, IAuthService authService) =>
 {
     var form = await context.Request.ReadFormAsync();
-    var email = form["Email"].ToString();
-    var password = form["Password"].ToString();
+    var loginRequest = new LoginRequest
+    {
+        Email = form["Email"].ToString(),
+        Password = form["Password"].ToString()
+    };
 
-    var result = await authService.LoginAsync(email, password);
+    // Validate the request using data annotations
+    var validationResults = new List<ValidationResult>();
+    var validationContext = new ValidationContext(loginRequest);
+    bool isValid = Validator.TryValidateObject(loginRequest, validationContext, validationResults, true);
+
+    if (!isValid)
+    {
+        var errors = string.Join(", ", validationResults.Select(vr => vr.ErrorMessage));
+        return Results.Redirect($"/login?error={Uri.EscapeDataString(errors)}");
+    }
+
+    var result = await authService.LoginAsync(loginRequest);
 
     if (result.Success)
     {
         var claims = new List<Claim>
         {
-            new(ClaimTypes.Name, email),
-            new(ClaimTypes.Email, email)
+            new(ClaimTypes.Name, loginRequest.Email),
+            new(ClaimTypes.Email, loginRequest.Email)
         };
 
         var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);

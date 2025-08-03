@@ -1,11 +1,11 @@
-using System.Net.Http.Json;
 using System.Text.Json;
+using AspireDeezNuts.Shared.Models;
 
 namespace AspireDeezNuts.Web.Services;
 
 public interface IAuthService
 {
-    Task<LoginResult> LoginAsync(string email, string password);
+    Task<LoginResult> LoginAsync(LoginRequest request);
     Task LogoutAsync();
     Task<string?> GetTokenAsync();
 }
@@ -16,20 +16,17 @@ public class AuthService(HttpClient httpClient, ILogger<AuthService> logger) : I
     private readonly ILogger<AuthService> _logger = logger;
     private string? _cachedToken;
 
-    public async Task<LoginResult> LoginAsync(string email, string password)
+    public async Task<LoginResult> LoginAsync(LoginRequest request)
     {
         try
         {
-            _logger.LogInformation("Sending login request to API for user: {Email}", email);
-            var response = await _httpClient.PostAsJsonAsync("api/v1/auth/login", new { email, password });
+            _logger.LogInformation("Sending login request to API for user: {Email}", request.Email);
+            var response = await _httpClient.PostAsJsonAsync("api/v1/auth/login", request);
 
             if (response.IsSuccessStatusCode)
             {
                 var content = await response.Content.ReadAsStringAsync();
-                var loginResponse = JsonSerializer.Deserialize<LoginResponse>(content, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                });
+                var loginResponse = JsonSerializer.Deserialize<LoginResponse>(content);
 
                 if (loginResponse != null)
                 {
@@ -47,7 +44,7 @@ public class AuthService(HttpClient httpClient, ILogger<AuthService> logger) : I
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Login error for user: {Email}", email);
+            _logger.LogError(ex, "Login error for user: {Email}", request.Email);
             return new LoginResult { Success = false, ErrorMessage = "An error occurred during login" };
         }
     }
@@ -83,11 +80,4 @@ public class LoginResult
 {
     public bool Success { get; set; }
     public string? ErrorMessage { get; set; }
-}
-
-public class LoginResponse
-{
-    public required string AccessToken { get; set; }
-    public required string RefreshToken { get; set; }
-    public int ExpiresIn { get; set; }
 }
