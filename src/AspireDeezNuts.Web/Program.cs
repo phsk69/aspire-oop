@@ -113,23 +113,23 @@ app.MapPost("/api/login", async (HttpContext context, IAuthService authService) 
     var form = await context.Request.ReadFormAsync();
     var email = form["Email"].ToString();
     var password = form["Password"].ToString();
-    
+
     var result = await authService.LoginAsync(email, password);
-    
+
     if (result.Success)
     {
         var claims = new List<Claim>
         {
-            new Claim(ClaimTypes.Name, email),
-            new Claim(ClaimTypes.Email, email)
+            new(ClaimTypes.Name, email),
+            new(ClaimTypes.Email, email)
         };
 
         var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
         await context.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(claimsIdentity));
-        
+
         return Results.Redirect("/");
     }
-    
+
     return Results.Redirect("/login?error=Invalid credentials");
 });
 

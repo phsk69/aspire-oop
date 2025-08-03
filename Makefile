@@ -33,7 +33,7 @@ clean:
 
 # Run tests
 test:
-	dotnet test --no-build --verbosity normal
+	dotnet test --verbosity normal
 
 # Publish the application
 publish:

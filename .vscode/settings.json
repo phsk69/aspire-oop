@@ -1,4 +1,6 @@
 {
     "dotnet.defaultSolution": "AspireDeezNuts.slnx",
-    "makefile.configureOnOpen": false
+    "makefile.configureOnOpen": false,
+    "cSpell.useGitignore": true,
+    "cSpell.allowCompoundWords": true
 }

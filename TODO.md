@@ -1,10 +1,9 @@
 # TODO
 
-## Basics
+## Immediate
 
-### Complete the TLS setup
-
-- [x] Find a proper way of trusting cert-manager CA's in dotnet containers so we can do https based service discovery
+- [ ] Input validation on registration in backend
+- [ ] Input validation on login form in frontend
 
 ## Design Patterns Implementation (GoF Book)
 
@@ -14,6 +13,7 @@
   - Defines contract for post data operations, enabling dependency inversion
 - [x] Implement `JsonPlaceholderPostRepository` (current external API)
   - Encapsulates current HTTP API calls, making external dependency explicit
+- [ ] Test builder needs more interfaces?
 - [ ] Implement `MockPostRepository` for testing/demo (use the in-mem DB)
   - Provides in-memory data for development/testing without external dependencies
   - Demonstrates strategy pattern - same interface, different behavior

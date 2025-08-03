@@ -11,4 +11,7 @@
     <Project Path="src/AspireDeezNuts.Shared/AspireDeezNuts.Shared.csproj" />
     <Project Path="src/AspireDeezNuts.Web/AspireDeezNuts.Web.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AspireDeezNuts.ApiService.Tests/AspireDeezNuts.ApiService.Tests.csproj" />
+  </Folder>
 </Solution>
