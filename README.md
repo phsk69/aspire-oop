@@ -183,19 +183,34 @@ All services expose health endpoints compatible with Kubernetes:
 ### Current Structure
 
 - **AspireDeezNuts.AppHost**: Aspire orchestrator managing service discovery and configuration
-- **AspireDeezNuts.ServiceDefaults**: Shared configuration for OpenTelemetry, health checks, and service discovery
-- **AspireDeezNuts.ApiService**: Minimal API with weather forecast endpoint and OpenAPI support
-- **AspireDeezNuts.Web**: Blazor Server application with interactive components
+- **AspireDeezNuts.ServiceDefaults**: Shared configuration for OpenTelemetry, health checks, and service discovery  
+- **AspireDeezNuts.ApiService**: Secured minimal API with JWT authentication, posts management, and OpenAPI support
+- **AspireDeezNuts.Web**: Blazor Server application with authentication, posts display with pagination, and interactive components
+- **AspireDeezNuts.Shared**: Shared class library containing common interfaces and models
+
+### Database Architecture
+
+The project uses an **in-memory database** for both development and deployment scenarios. This design choice provides several benefits:
+
+- **Flexible Development**: Rapid iteration without external database dependencies
+- **Integration Testing**: Proper testing capabilities with realistic data persistence within application lifecycle
+- **Deployment Simplicity**: Emulates actual deployment patterns while maintaining portability across environments
+- **Rancher Desktop Compatibility**: Seamless local Kubernetes development without additional infrastructure setup
+
+The in-memory approach allows for realistic authentication flows with JWT token persistence while keeping the development experience lightweight and the deployment process flexible.
 
 ### Technology Stack
 
 - .NET 9.0 with C# 13
-- .NET Aspire 9.3.1 for distributed application orchestration
+- .NET Aspire 9.X for distributed application orchestration
 - Blazor Server-Side Rendering with interactive components
+- Blazor Bootstrap 3.4.0 for UI components
+- JWT Authentication with in-memory identity database
 - Minimal APIs with OpenAPI/Swagger documentation
+- Repository pattern with external API integration (JsonPlaceholder)
 - OpenTelemetry for observability (metrics, tracing, logging)
-- Kubernetes deployment via Aspirate
-- Docker multi-stage builds
+- Hand-crafted Kubernetes manifests deployment
+- Docker multi-stage builds with nerdctl
 
 ### Design Patterns Implementation Goals
 

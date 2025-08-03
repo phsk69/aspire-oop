@@ -60,15 +60,22 @@ This is a .NET Aspire application with the following structure:
 
 ### Web (src/AspireDeezNuts.Web)
 
-- Blazor Server-Side Rendering application
-- Uses Blazor Bootstrap UI framework
+- Blazor Server-Side Rendering application with JWT authentication
+- Uses Blazor Bootstrap 3.4.0 UI framework (migrated from standard Bootstrap)
 - Interactive server components enabled
-- Main pages: Home, Weather, Counter, Posts (with pattern demonstrations)
+- Authentication state management with custom AuthenticationStateProvider
+- Main pages: Home, Counter, Posts (with pagination), Login
+- Posts display with external API integration and pagination
 - Dual HTTP/HTTPS support in Kubernetes (LoadBalancer service)
+- Microsoft-standard SSR authentication patterns
 
 ### ApiService (src/AspireDeezNuts.ApiService)
 
+- JWT-secured API with in-memory identity database
+- Authentication controller with login/logout endpoints
 - Posts controller demonstrating GoF patterns with cached JsonSerializerOptions
+- Repository pattern implementation with external JsonPlaceholder API integration
+- JWT token service with proper configuration
 - OpenAPI/Swagger enabled in development
 - HTTP-only communication in Kubernetes production
 - Runs on ports 5137 (HTTP), 7201 (HTTPS) in development
@@ -158,20 +165,69 @@ This is a .NET Aspire application with the following structure:
 - **Development vs Production**: Different protocols for different environments
 
 ## Technology Stack
-- .NET 9.0
-- .NET Aspire 9.3.1
-- Blazor with Server-Side Rendering
-- Blazor Bootstrap 3.4.0
-- Minimal APIs
-- OpenTelemetry for observability
-- Docker multi-stage builds
+- .NET 9.0 with C# 13
+- .NET Aspire 9.X
+- Blazor Server-Side Rendering with interactive components
+- Blazor Bootstrap 3.4.0 (migrated from standard Bootstrap)
+- JWT Authentication with Entity Framework Core in-memory database
+- Minimal APIs with OpenAPI/Swagger
+- Repository pattern with external API integration (JsonPlaceholder)
+- Custom authentication state management
+- Cached JsonSerializerOptions for performance
+- OpenTelemetry for observability (metrics, tracing, logging)
+- Docker multi-stage builds with nerdctl
 - Kubernetes with hand-crafted manifests
 - cert-manager for certificate management
 - Rancher Desktop for local K8s development
 
+### Shared (src/AspireDeezNuts.Shared)
+
+- Shared class library containing common interfaces and models
+- Repository interfaces (IRepositoryInterface, IPostRepositoryInterface)
+- Shared models (Post)
+- Common contracts used across API and Web projects
+
+## Database Architecture
+
+### In-Memory Database Strategy
+
+The project uses **Entity Framework Core with in-memory database** for both development and deployment:
+
+- **Flexible Development**: No external database dependencies, rapid iteration
+- **Integration Testing**: Realistic data persistence within application lifecycle
+- **Authentication Storage**: JWT identity management with in-memory persistence
+- **Deployment Portability**: Works consistently across local, Kubernetes, and cloud environments
+- **Rancher Desktop Compatibility**: No additional infrastructure setup required
+
+This approach allows for:
+- Realistic authentication flows with proper user identity persistence
+- External API integration patterns (JsonPlaceholder for posts)
+- Repository pattern demonstrations without database complexity
+- Clean separation between data access and business logic
+
+## Test guidelines
+- When writing unit tests, we should also test negative results where relevant
+
+## Current Working State
+
+### ✅ Fully Operational
+- All services running and communicating properly
+- JWT authentication system with login/logout functionality
+- External API integration with JsonPlaceholder for posts
+- Posts pagination and display in Web application
+- Blazor Bootstrap UI components fully integrated
+- External HTTPS access via LoadBalancer
+- Internal HTTP service-to-service communication
+- OpenTelemetry metrics, traces, and logs collection
+- Certificate infrastructure with automatic renewal
+- Persistent storage for all services
+- In-memory database with identity management
+
 ## Solution Structure
 - Uses modern .slnx solution file format
-- Four main projects: AppHost, Web, ApiService, ServiceDefaults
+- Five main projects: AppHost, Web, ApiService, ServiceDefaults, Shared
 - Comprehensive Makefile for development workflow automation
 - Hand-crafted Kubernetes manifests in `/manifests` directory
 - Three separate ConfigMaps for service-specific configuration
+- JWT authentication secrets management
+
