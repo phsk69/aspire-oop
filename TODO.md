@@ -2,8 +2,10 @@
 
 ## Immediate
 
-- [ ] Input validation on registration in backend
+- [x] Input validation on registration in backend
 - [ ] Input validation on login form in frontend
+- [ ] Secure Admin role registration somehow
+- [ ] Example on how to generate/create the api secret for jwt in the readme
 
 ## Design Patterns Implementation (GoF Book)
 

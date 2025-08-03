@@ -5,15 +5,14 @@ using AspireDeezNuts.Shared.Interfaces;
 using AspireDeezNuts.Shared.Models;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using System.Net.Http.Json;
-using System.Text.Json;
 
 namespace AspireDeezNuts.ApiService.Tests.Controllers;
 
 [TestClass]
 public class PostsControllerTests
 {
+    public TestContext TestContext { get; set; } = null!;
     private WebApplicationFactory<Program>? _factory;
     private HttpClient? _client;
     private InMemoryPostRepository? _repository;
@@ -63,11 +62,11 @@ public class PostsControllerTests
         _repository.AddRange(expectedPosts);
 
         // Act
-        var response = await _client!.GetAsync("/api/v1/posts");
+        var response = await _client!.GetAsync("/api/v1/posts", TestContext.CancellationTokenSource.Token);
 
         // Assert
         response.EnsureSuccessStatusCode();
-        var posts = await response.Content.ReadFromJsonAsync<List<Post>>();
+        var posts = await response.Content.ReadFromJsonAsync<List<Post>>(TestContext.CancellationTokenSource.Token);
 
         Assert.IsNotNull(posts);
         Assert.AreEqual(expectedPosts.Count, posts.Count);
@@ -88,11 +87,11 @@ public class PostsControllerTests
         await _repository.CreateAsync(expectedPost);
 
         // Act
-        var response = await _client!.GetAsync("/api/v1/posts/1");
+        var response = await _client!.GetAsync("/api/v1/posts/1", TestContext.CancellationTokenSource.Token);
 
         // Assert
         response.EnsureSuccessStatusCode();
-        var post = await response.Content.ReadFromJsonAsync<Post>();
+        var post = await response.Content.ReadFromJsonAsync<Post>(TestContext.CancellationTokenSource.Token);
 
         Assert.IsNotNull(post);
         Assert.AreEqual(expectedPost.Id, post.Id);
@@ -108,7 +107,7 @@ public class PostsControllerTests
         _repository!.Clear();
 
         // Act
-        var response = await _client!.GetAsync("/api/v1/posts/999");
+        var response = await _client!.GetAsync("/api/v1/posts/999", TestContext.CancellationTokenSource.Token);
 
         // Assert
         Assert.AreEqual(System.Net.HttpStatusCode.NotFound, response.StatusCode);
@@ -131,11 +130,11 @@ public class PostsControllerTests
         _repository.AddRange(user2Posts);
 
         // Act
-        var response = await _client!.GetAsync("/api/v1/posts/user/1");
+        var response = await _client!.GetAsync("/api/v1/posts/user/1", TestContext.CancellationTokenSource.Token);
 
         // Assert
         response.EnsureSuccessStatusCode();
-        var posts = await response.Content.ReadFromJsonAsync<List<Post>>();
+        var posts = await response.Content.ReadFromJsonAsync<List<Post>>(TestContext.CancellationTokenSource.Token);
 
         Assert.IsNotNull(posts);
         Assert.HasCount(3, posts);
@@ -157,11 +156,11 @@ public class PostsControllerTests
         _repository.AddRange(posts);
 
         // Act
-        var response = await _client!.GetAsync("/api/v1/posts/search?title=JavaScript");
+        var response = await _client!.GetAsync("/api/v1/posts/search?title=JavaScript", TestContext.CancellationTokenSource.Token);
 
         // Assert
         response.EnsureSuccessStatusCode();
-        var matchingPosts = await response.Content.ReadFromJsonAsync<List<Post>>();
+        var matchingPosts = await response.Content.ReadFromJsonAsync<List<Post>>(TestContext.CancellationTokenSource.Token);
 
         Assert.IsNotNull(matchingPosts);
         Assert.HasCount(2, matchingPosts);
@@ -172,7 +171,7 @@ public class PostsControllerTests
     public async Task SearchPosts_WithEmptyTitle_ShouldReturnBadRequest()
     {
         // Act
-        var response = await _client!.GetAsync("/api/v1/posts/search?title=");
+        var response = await _client!.GetAsync("/api/v1/posts/search?title=", TestContext.CancellationTokenSource.Token);
 
         // Assert
         Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
@@ -182,7 +181,7 @@ public class PostsControllerTests
     public async Task SearchPosts_WithoutTitleParameter_ShouldReturnBadRequest()
     {
         // Act
-        var response = await _client!.GetAsync("/api/v1/posts/search");
+        var response = await _client!.GetAsync("/api/v1/posts/search", TestContext.CancellationTokenSource.Token);
 
         // Assert
         Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, response.StatusCode);

@@ -1,4 +1,5 @@
 using AspireDeezNuts.ApiService.Services;
+using AspireDeezNuts.Shared.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -151,34 +152,4 @@ public class AuthController(
     {
         return Ok(new { message = "You are an admin!" });
     }
-}
-
-public class LoginRequest
-{
-    public required string Email { get; set; }
-    public required string Password { get; set; }
-}
-
-public class LoginResponse
-{
-    public required string AccessToken { get; set; }
-    public required string RefreshToken { get; set; }
-    public int ExpiresIn { get; set; }
-}
-
-public class RefreshTokenRequest
-{
-    public required string RefreshToken { get; set; }
-}
-
-public class LogoutRequest
-{
-    public string? RefreshToken { get; set; }
-}
-
-public class RegisterRequest
-{
-    public required string Email { get; set; }
-    public required string Password { get; set; }
-    public string? Role { get; set; }
 }
