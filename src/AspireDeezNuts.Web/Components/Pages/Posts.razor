@@ -130,7 +130,7 @@ else
             {
                 Logger.LogInformation("Attempting to fetch posts from API service (attempt {Attempt}/{MaxRetries})", attempt, maxRetries);
                 
-                using var httpClient = HttpClientFactory.CreateClient("apiservice");
+                using var httpClient = HttpClientFactory.CreateClient("authenticated-api");
                 posts = await httpClient.GetFromJsonAsync<Post[]>("api/v1/posts");
                 
                 Logger.LogInformation("Successfully fetched {PostCount} posts", posts?.Length ?? 0);

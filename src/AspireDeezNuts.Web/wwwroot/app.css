@@ -8,3 +8,8 @@
 .blazor-error-boundary::after {
     content: "An error has occurred."
 }
+
+/* Hide the false-positive Blazor error UI - known .NET 9 issue */
+#blazor-error-ui {
+    display: none !important;
+}

@@ -1,11 +1,11 @@
 using AspireDeezNuts.Web.Components;
 using AspireDeezNuts.Web.Services;
 using AspireDeezNuts.Shared.Models;
-using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication;
 using System.Security.Claims;
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Components.Server;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +15,15 @@ builder.AddServiceDefaults();
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+// Configure Blazor Server with detailed errors in development
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.Configure<CircuitOptions>(options =>
+    {
+        options.DetailedErrors = true;
+    });
+}
 builder.Services.AddBlazorBootstrap();
 
 // Add authentication services - Microsoft recommended approach
