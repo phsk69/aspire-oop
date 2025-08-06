@@ -95,8 +95,7 @@ For convenience, you can use this one-liner to set up both secrets files:
 cp src/AspireDeezNuts.ApiService/appsettings.Development.secrets.template.json \
    src/AspireDeezNuts.ApiService/appsettings.Development.secrets.json && \
 cp src/AspireDeezNuts.ApiService/appsettings.Development.secrets.json \
-   tests/AspireDeezNuts.ApiService.Tests/appsettings.Development.secrets.json && \
-echo "✅ Secrets files created. Remember to update with your actual values!"
+   tests/AspireDeezNuts.ApiService.Tests/appsettings.Development.secrets.json
 ```
 
 **Next steps after running the script:**

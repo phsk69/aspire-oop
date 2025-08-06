@@ -9,6 +9,7 @@ WORKDIR /src
 
 # Copy project files
 COPY ["src/AspireDeezNuts.Web/AspireDeezNuts.Web.csproj", "src/AspireDeezNuts.Web/"]
+COPY ["src/AspireDeezNuts.Shared/AspireDeezNuts.Shared.csproj", "src/AspireDeezNuts.Shared/"]
 COPY ["src/AspireDeezNuts.ServiceDefaults/AspireDeezNuts.ServiceDefaults.csproj", "src/AspireDeezNuts.ServiceDefaults/"]
 
 # Restore dependencies
