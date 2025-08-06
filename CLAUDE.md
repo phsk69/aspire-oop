@@ -64,7 +64,13 @@ This is a .NET Aspire application with the following structure:
 - Uses Blazor Bootstrap 3.4.0 UI framework (migrated from standard Bootstrap)
 - Interactive server components enabled
 - Authentication state management with custom AuthenticationStateProvider
-- Main pages: Home, Counter, Posts (with pagination), Login
+- Main pages: 
+  - **Home**: Landing page with authentication status
+  - **Counter**: Demo interactive component
+  - **Posts**: Authenticated API calls with pagination
+  - **Login**: JWT authentication with remember me option
+  - **UserAdmin**: User management interface (Admin-only)
+- AuthorizedHttpMessageHandler automatically adds JWT tokens to API requests
 - Posts display with external API integration and pagination
 - Dual HTTP/HTTPS support in Kubernetes (LoadBalancer service)
 - Microsoft-standard SSR authentication patterns
@@ -72,10 +78,14 @@ This is a .NET Aspire application with the following structure:
 ### ApiService (src/AspireDeezNuts.ApiService)
 
 - JWT-secured API with in-memory identity database
-- Authentication controller with login/logout endpoints
-- Posts controller demonstrating GoF patterns with cached JsonSerializerOptions
+- Controllers:
+  - **AuthController**: Login/logout/refresh/register endpoints with compliance logging
+  - **UserController**: Full CRUD operations for user management (Admin-only) with detailed logging
+  - **PostsController**: Authenticated posts API with user tracking in logs
+- All controllers implement comprehensive compliance logging (format: "User: {UserId} - Action")
 - Repository pattern implementation with external JsonPlaceholder API integration
-- JWT token service with proper configuration
+- JWT token service with access and refresh token support
+- Role-based authorization (Admin, User roles)
 - OpenAPI/Swagger enabled in development
 - HTTP-only communication in Kubernetes production
 - Runs on ports 5137 (HTTP), 7201 (HTTPS) in development
@@ -213,8 +223,13 @@ This approach allows for:
 ### ✅ Fully Operational
 - All services running and communicating properly
 - JWT authentication system with login/logout functionality
+- Role-based access control with Admin and User roles
+- User management system with full CRUD operations (Admin only)
+- Posts API requires authentication for all endpoints
+- Comprehensive compliance logging for all user actions (format: "User: {UserId} - Action")
 - External API integration with JsonPlaceholder for posts
-- Posts pagination and display in Web application
+- Posts pagination and display in Web application with authenticated API calls
+- User administration page for managing users (Admin only)
 - Blazor Bootstrap UI components fully integrated
 - External HTTPS access via LoadBalancer
 - Internal HTTP service-to-service communication
@@ -222,6 +237,7 @@ This approach allows for:
 - Certificate infrastructure with automatic renewal
 - Persistent storage for all services
 - In-memory database with identity management
+- Full test coverage for authenticated controllers
 
 ## Solution Structure
 - Uses modern .slnx solution file format

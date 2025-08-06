@@ -1,14 +1,21 @@
 using Microsoft.AspNetCore.Mvc;
 using AspireDeezNuts.Shared.Interfaces;
 using AspireDeezNuts.Shared.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 
 namespace AspireDeezNuts.ApiService.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/v1/[controller]")]
-public class PostsController(IPostRepository postRepository, ILogger<PostsController> logger) : ControllerBase
+public class PostsController(
+    IPostRepository postRepository, 
+    UserManager<IdentityUser> userManager,
+    ILogger<PostsController> logger) : ControllerBase
 {
     private readonly IPostRepository _postRepository = postRepository;
+    private readonly UserManager<IdentityUser> _userManager = userManager;
     private readonly ILogger<PostsController> _logger = logger;
 
     [HttpGet]
@@ -16,14 +23,18 @@ public class PostsController(IPostRepository postRepository, ILogger<PostsContro
     {
         try
         {
-            _logger.LogInformation("Fetching all posts");
+            var userEmail = User.Identity?.Name;
+            var user = await _userManager.FindByEmailAsync(userEmail ?? "");
+            _logger.LogInformation("User: {UserId} - Fetching all posts", user?.Id ?? "Unknown");
             var posts = await _postRepository.ReadAsync();
-            _logger.LogInformation("Successfully fetched {PostCount} posts", posts.Count);
+            _logger.LogInformation("User: {UserId} - Successfully fetched {PostCount} posts", user?.Id ?? "Unknown", posts.Count);
             return Ok(posts);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching posts");
+            var userEmail = User.Identity?.Name;
+            var user = await _userManager.FindByEmailAsync(userEmail ?? "");
+            _logger.LogError(ex, "User: {UserId} - Error fetching posts", user?.Id ?? "Unknown");
             return StatusCode(500, "Failed to fetch posts");
         }
     }
@@ -33,20 +44,25 @@ public class PostsController(IPostRepository postRepository, ILogger<PostsContro
     {
         try
         {
-            _logger.LogInformation("Fetching post {PostId}", id);
+            var userEmail = User.Identity?.Name;
+            var user = await _userManager.FindByEmailAsync(userEmail ?? "");
+            _logger.LogInformation("User: {UserId} - Fetching post {PostId}", user?.Id ?? "Unknown", id);
             var post = await _postRepository.ReadByIdAsync(id);
 
             if (post == null)
             {
+                _logger.LogWarning("User: {UserId} - Post {PostId} not found", user?.Id ?? "Unknown", id);
                 return NotFound($"Post with ID {id} not found");
             }
 
-            _logger.LogInformation("Successfully fetched post {PostId}", id);
+            _logger.LogInformation("User: {UserId} - Successfully fetched post {PostId}", user?.Id ?? "Unknown", id);
             return Ok(post);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching post {PostId}", id);
+            var userEmail = User.Identity?.Name;
+            var user = await _userManager.FindByEmailAsync(userEmail ?? "");
+            _logger.LogError(ex, "User: {UserId} - Error fetching post {PostId}", user?.Id ?? "Unknown", id);
             return StatusCode(500, "Failed to fetch post");
         }
     }
@@ -56,14 +72,18 @@ public class PostsController(IPostRepository postRepository, ILogger<PostsContro
     {
         try
         {
-            _logger.LogInformation("Fetching posts for user {UserId}", userId);
+            var userEmail = User.Identity?.Name;
+            var user = await _userManager.FindByEmailAsync(userEmail ?? "");
+            _logger.LogInformation("User: {UserId} - Fetching posts for author {AuthorId}", user?.Id ?? "Unknown", userId);
             var posts = await _postRepository.GetByUserIdAsync(userId);
-            _logger.LogInformation("Successfully fetched {PostCount} posts for user {UserId}", posts.Count, userId);
+            _logger.LogInformation("User: {UserId} - Successfully fetched {PostCount} posts for author {AuthorId}", user?.Id ?? "Unknown", posts.Count, userId);
             return Ok(posts);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching posts for user {UserId}", userId);
+            var userEmail = User.Identity?.Name;
+            var user = await _userManager.FindByEmailAsync(userEmail ?? "");
+            _logger.LogError(ex, "User: {UserId} - Error fetching posts for author {AuthorId}", user?.Id ?? "Unknown", userId);
             return StatusCode(500, "Failed to fetch posts");
         }
     }
@@ -78,14 +98,18 @@ public class PostsController(IPostRepository postRepository, ILogger<PostsContro
 
         try
         {
-            _logger.LogInformation("Searching posts with title containing '{Title}'", title);
+            var userEmail = User.Identity?.Name;
+            var user = await _userManager.FindByEmailAsync(userEmail ?? "");
+            _logger.LogInformation("User: {UserId} - Searching posts with title containing '{Title}'", user?.Id ?? "Unknown", title);
             var posts = await _postRepository.GetByTitleAsync(title);
-            _logger.LogInformation("Found {PostCount} posts matching '{Title}'", posts.Count, title);
+            _logger.LogInformation("User: {UserId} - Found {PostCount} posts matching '{Title}'", user?.Id ?? "Unknown", posts.Count, title);
             return Ok(posts);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error searching posts with title '{Title}'", title);
+            var userEmail = User.Identity?.Name;
+            var user = await _userManager.FindByEmailAsync(userEmail ?? "");
+            _logger.LogError(ex, "User: {UserId} - Error searching posts with title '{Title}'", user?.Id ?? "Unknown", title);
             return StatusCode(500, "Failed to search posts");
         }
     }

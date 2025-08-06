@@ -28,7 +28,7 @@ public class AuthController(
         var user = await _userManager.FindByEmailAsync(request.Email);
         if (user == null)
         {
-            _logger.LogWarning("Login attempt for non-existent user: {Email}", request.Email);
+            _logger.LogWarning("User: {Email} - Login attempt failed (user not found)", request.Email);
             return Unauthorized(new { message = "Invalid email or password" });
         }
 
@@ -36,17 +36,17 @@ public class AuthController(
 
         if (result.IsLockedOut)
         {
-            _logger.LogWarning("User account locked out: {Email}", request.Email);
+            _logger.LogWarning("User: {UserId} - Account locked out during login attempt", user.Id);
             return Unauthorized(new { message = "Account locked out. Please try again later." });
         }
 
         if (!result.Succeeded)
         {
-            _logger.LogWarning("Invalid password for user: {Email}", request.Email);
+            _logger.LogWarning("User: {UserId} - Invalid password during login attempt", user.Id);
             return Unauthorized(new { message = "Invalid email or password" });
         }
 
-        _logger.LogInformation("User logged in successfully: {Email}", request.Email);
+        _logger.LogInformation("User: {UserId} - Successfully logged in", user.Id);
         var tokens = await _tokenService.GenerateTokensAsync(user);
 
         return Ok(new LoginResponse
@@ -66,9 +66,36 @@ public class AuthController(
         var tokens = await _tokenService.RefreshTokensAsync(request.RefreshToken);
         if (tokens == null)
         {
-            _logger.LogWarning("Invalid refresh token attempted");
+            _logger.LogWarning("User: Unknown - Invalid refresh token attempted");
             return Unauthorized(new { message = "Invalid refresh token" });
         }
+
+        return Ok(new LoginResponse
+        {
+            AccessToken = tokens.AccessToken,
+            RefreshToken = tokens.RefreshToken,
+            ExpiresIn = (int)(tokens.AccessTokenExpiry - DateTime.UtcNow).TotalSeconds
+        });
+    }
+
+    [HttpPost("refresh-simple")]
+    [Authorize]
+    public async Task<IActionResult> RefreshSimpleToken()
+    {
+        var userEmail = User.Identity?.Name;
+        if (string.IsNullOrEmpty(userEmail))
+        {
+            return Unauthorized(new { message = "Invalid user context" });
+        }
+
+        var user = await _userManager.FindByEmailAsync(userEmail);
+        if (user == null)
+        {
+            return Unauthorized(new { message = "User not found" });
+        }
+
+        _logger.LogInformation("User: {UserId} - Token refresh requested", user.Id);
+        var tokens = await _tokenService.GenerateTokensAsync(user);
 
         return Ok(new LoginResponse
         {
@@ -88,7 +115,8 @@ public class AuthController(
         }
 
         var userEmail = User.Identity?.Name;
-        _logger.LogInformation("User logged out: {Email}", userEmail);
+        var currentUser = await _userManager.FindByEmailAsync(userEmail ?? "");
+        _logger.LogInformation("User: {UserId} - Successfully logged out", currentUser?.Id ?? "Unknown");
 
         return Ok(new { message = "Logged out successfully" });
     }
@@ -97,10 +125,10 @@ public class AuthController(
     [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request)
     {
-        _logger.LogInformation("Register endpoint called by user: {User}, IsAuthenticated: {IsAuth}, Claims: {Claims}", 
-            User.Identity?.Name, 
-            User.Identity?.IsAuthenticated,
-            string.Join(", ", User.Claims.Select(c => $"{c.Type}={c.Value}")));
+        var adminEmail = User.Identity?.Name;
+        var adminUser = await _userManager.FindByEmailAsync(adminEmail ?? "");
+        _logger.LogInformation("User: {AdminUserId} - Register endpoint called for new user: {Email}", 
+            adminUser?.Id ?? "Unknown", request.Email);
 
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
@@ -134,7 +162,8 @@ public class AuthController(
             await _userManager.AddToRoleAsync(user, "User"); // Default role
         }
 
-        _logger.LogInformation("New user registered: {Email} with role: {Role}", request.Email, request.Role ?? "User");
+        _logger.LogInformation("User: {AdminUserId} - Successfully registered new user: {NewUserId} with role: {Role}", 
+            adminUser?.Id ?? "Unknown", user.Id, request.Role ?? "User");
 
         return Ok(new { message = "User registered successfully", userId = user.Id });
     }

@@ -309,9 +309,9 @@ All services expose health endpoints compatible with Kubernetes:
 
 - **AspireDeezNuts.AppHost**: Aspire orchestrator managing service discovery and configuration
 - **AspireDeezNuts.ServiceDefaults**: Shared configuration for OpenTelemetry, health checks, and service discovery  
-- **AspireDeezNuts.ApiService**: Secured minimal API with JWT authentication, posts management, and OpenAPI support
-- **AspireDeezNuts.Web**: Blazor Server application with authentication, posts display with pagination, and interactive components
-- **AspireDeezNuts.Shared**: Shared class library containing common interfaces and models
+- **AspireDeezNuts.ApiService**: Secured minimal API with JWT authentication, user management, posts management with authentication, comprehensive compliance logging, and OpenAPI support
+- **AspireDeezNuts.Web**: Blazor Server application with authentication, user administration, authenticated posts display with pagination, and interactive components
+- **AspireDeezNuts.Shared**: Shared class library containing common interfaces, models, and DTOs for user management
 
 ### Database Architecture
 
@@ -331,8 +331,11 @@ The in-memory approach allows for realistic authentication flows with JWT token 
 - Blazor Server-Side Rendering with interactive components
 - Blazor Bootstrap 3.4.0 for UI components
 - JWT Authentication with in-memory identity database
+- Role-based access control (Admin and User roles)
+- User management system with full CRUD operations
 - Minimal APIs with OpenAPI/Swagger documentation
 - Repository pattern with external API integration (JsonPlaceholder)
+- Comprehensive compliance logging for all user actions
 - OpenTelemetry for observability (metrics, tracing, logging)
 - Hand-crafted Kubernetes manifests deployment
 - Docker multi-stage builds with nerdctl

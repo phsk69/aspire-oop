@@ -9,6 +9,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net.Http.Json;
+using System.Net.Http.Headers;
+using System.Net;
 
 namespace AspireDeezNuts.ApiService.Tests.Controllers;
 
@@ -19,9 +21,10 @@ public class PostsControllerTests
     private WebApplicationFactory<Program>? _factory;
     private HttpClient? _client;
     private InMemoryPostRepository? _repository;
+    private string? _jwtToken;
 
     [TestInitialize]
-    public void Setup()
+    public async Task Setup()
     {
         _repository = new InMemoryPostRepository();
 
@@ -78,6 +81,9 @@ public class PostsControllerTests
             });
 
         _client = _factory.CreateClient();
+        
+        // Authenticate and get JWT token
+        await AuthenticateAsync();
     }
 
     [TestCleanup]
@@ -87,8 +93,51 @@ public class PostsControllerTests
         _factory?.Dispose();
     }
 
+    private async Task AuthenticateAsync()
+    {
+        // Get the initial admin credentials from configuration
+        var config = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.Development.secrets.json", optional: false)
+            .Build();
+
+        var adminEmail = config["SeedData:InitialAdmin:Email"];
+        var adminPassword = config["SeedData:InitialAdmin:Password"];
+
+        var loginRequest = new { Email = adminEmail, Password = adminPassword };
+        var response = await _client!.PostAsJsonAsync("/api/v1/auth/login", loginRequest);
+        
+        Assert.IsTrue(response.IsSuccessStatusCode, $"Authentication failed: {response.StatusCode}");
+        
+        var loginResponse = await response.Content.ReadFromJsonAsync<LoginResponse>(TestContext.CancellationTokenSource.Token);
+        Assert.IsNotNull(loginResponse?.AccessToken, "Failed to get access token");
+        
+        _jwtToken = loginResponse.AccessToken;
+        _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _jwtToken);
+    }
+
+    private class LoginResponse
+    {
+        public string AccessToken { get; set; } = string.Empty;
+        public string RefreshToken { get; set; } = string.Empty;
+        public int ExpiresIn { get; set; }
+    }
+
     [TestMethod]
-    public async Task GetPosts_ShouldReturnAllPosts()
+    public async Task GetPosts_WithoutAuth_ShouldReturnUnauthorized()
+    {
+        // Arrange - Remove authentication header
+        _client!.DefaultRequestHeaders.Authorization = null;
+        
+        // Act
+        var response = await _client.GetAsync("/api/v1/posts", TestContext.CancellationTokenSource.Token);
+        
+        // Assert
+        Assert.AreEqual(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [TestMethod]
+    public async Task GetPosts_WithAuth_ShouldReturnAllPosts()
     {
         // Arrange - using Builder Pattern
         var expectedPosts = PostCollectionBuilder.Create()

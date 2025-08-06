@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using AspireDeezNuts.Shared.Models;
 
 namespace AspireDeezNuts.ApiService.Data;
 
@@ -23,15 +24,4 @@ public class AppIdentityDbContext(DbContextOptions<AppIdentityDbContext> options
             entity.Property(e => e.UserId).IsRequired();
         });
     }
-}
-
-public class RefreshToken
-{
-    public int Id { get; set; }
-    public required string Token { get; set; }
-    public required string UserId { get; set; }
-    public DateTime ExpiresAt { get; set; }
-    public bool IsRevoked { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime? RevokedAt { get; set; }
 }

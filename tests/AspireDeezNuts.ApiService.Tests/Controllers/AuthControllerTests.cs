@@ -74,7 +74,7 @@ public class AuthControllerTests
         _client?.Dispose();
     }
     
-    [ClassCleanup]
+    [ClassCleanup(ClassCleanupBehavior.EndOfClass)]
     public static void ClassCleanup()
     {
         _sharedFactory?.Dispose();
@@ -582,6 +582,111 @@ public class AuthControllerTests
         Assert.IsNotNull(content?.Errors);
         var hasPasswordError = content.Errors.ContainsKey("password") || content.Errors.ContainsKey("Password") || content.Errors.ContainsKey("$") || content.Errors.ContainsKey("request");
         Assert.IsTrue(hasPasswordError);
+    }
+
+    #endregion
+
+    #region Refresh Simple Tests
+
+    [TestMethod]
+    public async Task RefreshSimple_WithValidToken_ShouldReturnNewToken()
+    {
+        // Arrange - Use admin token
+        _client!.DefaultRequestHeaders.Authorization = 
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _adminToken);
+
+        // Act
+        var response = await _client.PostAsync("/api/v1/auth/refresh-simple", null, TestContext.CancellationTokenSource.Token);
+
+        // Assert
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        var content = await response.Content.ReadFromJsonAsync<LoginResponse>(TestContext.CancellationTokenSource.Token);
+        Assert.IsNotNull(content?.AccessToken);
+        Assert.IsNotNull(content?.RefreshToken);
+        Assert.IsTrue(content.ExpiresIn > 0);
+        
+        // Verify the new token is different from the original
+        Assert.AreNotEqual(_adminToken, content.AccessToken);
+    }
+
+    [TestMethod]
+    public async Task RefreshSimple_WithoutAuthentication_ShouldReturnUnauthorized()
+    {
+        // Arrange - Clear authorization header
+        _client!.DefaultRequestHeaders.Authorization = null;
+
+        // Act
+        var response = await _client.PostAsync("/api/v1/auth/refresh-simple", null, TestContext.CancellationTokenSource.Token);
+
+        // Assert
+        Assert.AreEqual(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [TestMethod]
+    public async Task RefreshSimple_WithInvalidToken_ShouldReturnUnauthorized()
+    {
+        // Arrange - Use invalid token
+        _client!.DefaultRequestHeaders.Authorization = 
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", "invalid.token.here");
+
+        // Act
+        var response = await _client.PostAsync("/api/v1/auth/refresh-simple", null, TestContext.CancellationTokenSource.Token);
+
+        // Assert
+        Assert.AreEqual(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [TestMethod]
+    public async Task RefreshSimple_WithExpiredToken_ShouldReturnUnauthorized()
+    {
+        // Arrange - Create a token with very short expiry
+        using var scope = _sharedFactory!.Services.CreateScope();
+        var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+        var adminEmail = config["SeedData:InitialAdmin:Email"]!;
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
+        var tokenService = scope.ServiceProvider.GetRequiredService<AspireDeezNuts.ApiService.Services.ITokenService>();
+        
+        var user = await userManager.FindByEmailAsync(adminEmail);
+        Assert.IsNotNull(user);
+        
+        // Generate token with very short expiry (this would require modifying token service for true expiry test)
+        // For now, we'll just test the current flow
+        var expiredToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2MDE0MjE2MDB9.invalid";
+        
+        _client!.DefaultRequestHeaders.Authorization = 
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", expiredToken);
+
+        // Act
+        var response = await _client.PostAsync("/api/v1/auth/refresh-simple", null, TestContext.CancellationTokenSource.Token);
+
+        // Assert
+        Assert.AreEqual(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [TestMethod]
+    public async Task RefreshSimple_NewTokenShouldBeValidForAPIAccess()
+    {
+        // Arrange - Get new token via refresh
+        _client!.DefaultRequestHeaders.Authorization = 
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _adminToken);
+
+        var refreshResponse = await _client.PostAsync("/api/v1/auth/refresh-simple", null, TestContext.CancellationTokenSource.Token);
+        Assert.AreEqual(HttpStatusCode.OK, refreshResponse.StatusCode);
+        
+        var refreshContent = await refreshResponse.Content.ReadFromJsonAsync<LoginResponse>(TestContext.CancellationTokenSource.Token);
+        var newToken = refreshContent?.AccessToken;
+        Assert.IsNotNull(newToken);
+
+        // Act - Use new token to access protected endpoint
+        _client.DefaultRequestHeaders.Authorization = 
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", newToken);
+
+        var testResponse = await _client.GetAsync("/api/v1/auth/test-admin", TestContext.CancellationTokenSource.Token);
+
+        // Assert
+        Assert.AreEqual(HttpStatusCode.OK, testResponse.StatusCode);
+        var testContent = await testResponse.Content.ReadAsStringAsync(TestContext.CancellationTokenSource.Token);
+        Assert.Contains("admin", testContent, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

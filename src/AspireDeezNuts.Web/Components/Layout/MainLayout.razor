@@ -1,4 +1,6 @@
+@using Microsoft.AspNetCore.Components.Authorization
 @inherits LayoutComponentBase
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <div class="page">
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
@@ -25,6 +27,15 @@
                             <Icon Name="IconName.ListNested" /> Posts
                         </NavLink>
                     </li>
+                    <AuthorizeView Roles="Admin">
+                        <Authorized>
+                            <li class="nav-item">
+                                <NavLink class="nav-link" href="admin/users">
+                                    <Icon Name="IconName.PeopleFill" /> User Admin
+                                </NavLink>
+                            </li>
+                        </Authorized>
+                    </AuthorizeView>
                 </ul>
                 <div class="navbar-nav ms-auto">
                     <LoginDisplay />
