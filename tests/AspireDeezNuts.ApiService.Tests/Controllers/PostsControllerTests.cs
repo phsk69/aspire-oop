@@ -1,9 +1,12 @@
+using AspireDeezNuts.ApiService.Data;
 using AspireDeezNuts.ApiService.Tests.Builders;
 using AspireDeezNuts.ApiService.Tests.Factories;
 using AspireDeezNuts.ApiService.Tests.Repositories;
 using AspireDeezNuts.Shared.Interfaces;
 using AspireDeezNuts.Shared.Models;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net.Http.Json;
 
@@ -22,16 +25,51 @@ public class PostsControllerTests
     {
         _repository = new InMemoryPostRepository();
 
+        // Use configuration from local secrets file
+        var testConfig = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.Development.secrets.json", optional: false, reloadOnChange: false)
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Jwt:Issuer"] = "AspireDeezNuts",
+                ["Jwt:Audience"] = "AspireDeezNutsUsers",
+                ["Jwt:AccessTokenExpiryMinutes"] = "15",
+                ["Jwt:RefreshTokenExpiryDays"] = "7",
+                ["UseInMemoryDatabase"] = "true"
+            })
+            .Build();
+
         _factory = new WebApplicationFactory<Program>()
             .WithWebHostBuilder(builder =>
             {
+                // Use the configuration we built
+                builder.ConfigureAppConfiguration((context, config) =>
+                {
+                    config.Sources.Clear();
+                    config.AddConfiguration(testConfig);
+                });
+                
                 builder.ConfigureServices(services =>
                 {
-                    // Replace the registered IPostRepository with our test implementation
-                    var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IPostRepository));
+                    // Use a unique database name for each test method
+                    var databaseName = $"TestDb_PostsController_{Guid.NewGuid()}";
+                    
+                    // Remove the existing DbContext registration
+                    var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppIdentityDbContext>));
                     if (descriptor != null)
                     {
                         services.Remove(descriptor);
+                    }
+
+                    // Add test database
+                    services.AddDbContext<AppIdentityDbContext>(options =>
+                        options.UseInMemoryDatabase(databaseName));
+                    
+                    // Replace the registered IPostRepository with our test implementation
+                    var repoDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IPostRepository));
+                    if (repoDescriptor != null)
+                    {
+                        services.Remove(repoDescriptor);
                     }
 
                     services.AddSingleton<IPostRepository>(_repository);

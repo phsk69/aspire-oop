@@ -3,6 +3,7 @@ using AspireDeezNuts.Shared.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using System.Net.Http.Json;
@@ -11,22 +12,48 @@ using System.Text.Json;
 namespace AspireDeezNuts.ApiService.Tests.Controllers;
 
 [TestClass]
+[DoNotParallelize]
 public class AuthControllerTests
 {
     public TestContext TestContext { get; set; } = null!;
-    private WebApplicationFactory<Program>? _factory;
+    private static WebApplicationFactory<Program>? _sharedFactory;
     private HttpClient? _client;
     private string? _adminToken;
 
-    [TestInitialize]
-    public async Task Setup()
+    [ClassInitialize]
+    public static void ClassSetup(TestContext context)
     {
-        var databaseName = $"TestDb_{Guid.NewGuid()}";
-        _factory = new WebApplicationFactory<Program>()
+        // Use configuration from local secrets file
+        var testConfig = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.Development.secrets.json", optional: false, reloadOnChange: false)
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Jwt:Issuer"] = "AspireDeezNuts",
+                ["Jwt:Audience"] = "AspireDeezNutsUsers",
+                ["Jwt:AccessTokenExpiryMinutes"] = "15",
+                ["Jwt:RefreshTokenExpiryDays"] = "7",
+                ["UseInMemoryDatabase"] = "true"
+            })
+            .Build();
+        
+        // Create a single shared factory for all tests in this class
+        // This ensures consistent JWT configuration across all test operations
+        _sharedFactory = new WebApplicationFactory<Program>()
             .WithWebHostBuilder(builder =>
             {
+                // Use the configuration we built
+                builder.ConfigureAppConfiguration((context, config) =>
+                {
+                    config.Sources.Clear();
+                    config.AddConfiguration(testConfig);
+                });
+                
                 builder.ConfigureServices(services =>
                 {
+                    // Use a unique database name for each test method (based on timestamp and random guid)
+                    var databaseName = $"TestDb_AuthController_{DateTimeOffset.UtcNow.Ticks}_{Guid.NewGuid()}";
+                    
                     // Remove the existing DbContext registration
                     var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppIdentityDbContext>));
                     if (descriptor != null)
@@ -34,64 +61,58 @@ public class AuthControllerTests
                         services.Remove(descriptor);
                     }
 
-                    // Add a shared in-memory database for this test
+                    // Add test database with a truly unique name
                     services.AddDbContext<AppIdentityDbContext>(options =>
                         options.UseInMemoryDatabase(databaseName));
                 });
             });
-
-        _client = _factory.CreateClient();
-
-        // Seed an admin user and get token for testing registration endpoint
-        await SeedAdminUserAsync(TestContext.CancellationTokenSource.Token);
     }
 
-    private async Task SeedAdminUserAsync(CancellationToken cancellationToken)
+    [TestCleanup]
+    public void TestCleanup()
     {
-        using var scope = _factory!.Services.CreateScope();
-        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
-        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+        _client?.Dispose();
+    }
+    
+    [ClassCleanup]
+    public static void ClassCleanup()
+    {
+        _sharedFactory?.Dispose();
+    }
 
-        // Create Admin role
-        if (!await roleManager.RoleExistsAsync("Admin"))
-        {
-            await roleManager.CreateAsync(new IdentityRole("Admin"));
-        }
+    [TestInitialize]
+    public async Task Setup()
+    {
+        _client = _sharedFactory!.CreateClient();
 
-        // Create User role
-        if (!await roleManager.RoleExistsAsync("User"))
-        {
-            await roleManager.CreateAsync(new IdentityRole("User"));
-        }
+        // Wait for DataSeeder to complete and get admin token
+        await GetAdminTokenAsync(TestContext.CancellationTokenSource.Token);
+    }
 
-        // Create admin user
-        var adminUser = new IdentityUser
-        {
-            UserName = "admin@test.com",
-            Email = "admin@test.com",
-            EmailConfirmed = true
-        };
+    private async Task GetAdminTokenAsync(CancellationToken cancellationToken)
+    {
+        // Give the DataSeeder time to run (it runs on app startup)
+        await Task.Delay(100, cancellationToken);
 
-        var createResult = await userManager.CreateAsync(adminUser, "Admin123!");
-        if (!createResult.Succeeded)
-        {
-            throw new InvalidOperationException($"Failed to create admin user: {string.Join(", ", createResult.Errors.Select(e => e.Description))}");
-        }
+        // Get configuration values from the test configuration
+        using var scope = _sharedFactory!.Services.CreateScope();
+        var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+        var adminEmail = config["SeedData:InitialAdmin:Email"];
+        var adminPassword = config["SeedData:InitialAdmin:Password"];
         
-        var roleResult = await userManager.AddToRoleAsync(adminUser, "Admin");
-        if (!roleResult.Succeeded)
+        if (string.IsNullOrEmpty(adminEmail) || string.IsNullOrEmpty(adminPassword))
         {
-            throw new InvalidOperationException($"Failed to add admin role: {string.Join(", ", roleResult.Errors.Select(e => e.Description))}");
+            throw new InvalidOperationException("Admin credentials not found in configuration. Ensure appsettings.Development.secrets.json exists with SeedData:InitialAdmin section.");
         }
 
-        // Get admin token
-        var loginRequest = new { Email = "admin@test.com", Password = "Admin123!" };
+        // Get admin token using the seeded credentials
+        var loginRequest = new { Email = adminEmail, Password = adminPassword };
         var response = await _client!.PostAsJsonAsync("/api/v1/auth/login", loginRequest, cancellationToken);
         
         if (!response.IsSuccessStatusCode)
         {
             var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
-            throw new InvalidOperationException($"Login failed with status {response.StatusCode}: {errorContent}");
+            throw new InvalidOperationException($"Login failed with status {response.StatusCode}: {errorContent}. Using credentials: {adminEmail}");
         }
         
         var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -99,12 +120,6 @@ public class AuthControllerTests
         _adminToken = loginResponse?.AccessToken;
     }
 
-    [TestCleanup]
-    public void Cleanup()
-    {
-        _client?.Dispose();
-        _factory?.Dispose();
-    }
 
     #region Registration Validation Tests
 
@@ -384,11 +399,24 @@ public class AuthControllerTests
         // Assert
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
         
+        // Read the response to get the user ID (note: the controller returns lowercase field names)
+        var responseText = await response.Content.ReadAsStringAsync(TestContext.CancellationTokenSource.Token);
+        dynamic responseContent = System.Text.Json.JsonSerializer.Deserialize<dynamic>(responseText)!;
+        var userIdElement = ((System.Text.Json.JsonElement)responseContent).GetProperty("userId");
+        var userId = userIdElement.GetString();
+        Assert.IsNotNull(userId, "Registration should return user ID");
+        
+        // Add some delay to ensure the user is persisted
+        await Task.Delay(100, TestContext.CancellationTokenSource.Token);
+        
         // Verify user has User role
-        using var scope = _factory!.Services.CreateScope();
+        using var scope = _sharedFactory!.Services.CreateScope();
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
-        var user = await userManager.FindByEmailAsync("newuser2@test.com");
-        var roles = await userManager.GetRolesAsync(user!);
+        
+        // Find user by ID
+        var user = await userManager.FindByIdAsync(userId);
+        Assert.IsNotNull(user, "User should have been created");
+        var roles = await userManager.GetRolesAsync(user);
         Assert.Contains("User", roles);
     }
 
@@ -396,9 +424,14 @@ public class AuthControllerTests
     public async Task Register_WithExistingEmail_ShouldReturnBadRequest()
     {
         // Arrange
+        // Get the seeded admin email from configuration
+        using var scope = _sharedFactory!.Services.CreateScope();
+        var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+        var adminEmail = config["SeedData:InitialAdmin:Email"]!;
+        
         var request = new RegisterRequest
         {
-            Email = "admin@test.com", // Already exists from seed
+            Email = adminEmail, // Already exists from seed
             Password = "ValidPass123!",
             Role = "User"
         };
@@ -428,11 +461,21 @@ public class AuthControllerTests
 
         _client!.DefaultRequestHeaders.Authorization = 
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _adminToken);
-        await _client.PostAsJsonAsync("/api/v1/auth/register", regularUser, TestContext.CancellationTokenSource.Token);
+        var registerResponse = await _client.PostAsJsonAsync("/api/v1/auth/register", regularUser, TestContext.CancellationTokenSource.Token);
+        
+        // Ensure registration was successful
+        Assert.AreEqual(HttpStatusCode.OK, registerResponse.StatusCode, "Failed to register regular user");
+
+        // Clear authorization header before login
+        _client.DefaultRequestHeaders.Authorization = null;
 
         // Login as regular user
         var loginRequest = new { Email = "regular@test.com", Password = "RegularPass123!" };
         var loginResponse = await _client.PostAsJsonAsync("/api/v1/auth/login", loginRequest, TestContext.CancellationTokenSource.Token);
+        
+        // Check if login was successful
+        Assert.AreEqual(HttpStatusCode.OK, loginResponse.StatusCode, "Failed to login as regular user");
+        
         var loginContent = await loginResponse.Content.ReadFromJsonAsync<LoginResponse>(TestContext.CancellationTokenSource.Token);
         var userToken = loginContent?.AccessToken;
 
@@ -461,11 +504,16 @@ public class AuthControllerTests
     [TestMethod]
     public async Task Login_WithValidCredentials_ShouldReturnToken()
     {
-        // Arrange
+        // Arrange - Get credentials from configuration
+        using var scope = _sharedFactory!.Services.CreateScope();
+        var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+        var adminEmail = config["SeedData:InitialAdmin:Email"]!;
+        var adminPassword = config["SeedData:InitialAdmin:Password"]!;
+        
         var request = new LoginRequest
         {
-            Email = "admin@test.com",
-            Password = "Admin123!"
+            Email = adminEmail,
+            Password = adminPassword
         };
 
         // Act
@@ -518,8 +566,12 @@ public class AuthControllerTests
     [TestMethod]
     public async Task Login_WithMissingPassword_ShouldReturnBadRequest()
     {
-        // Arrange
-        var request = new { Email = "admin@test.com" };
+        // Arrange - Get admin email from configuration
+        using var scope = _sharedFactory!.Services.CreateScope();
+        var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+        var adminEmail = config["SeedData:InitialAdmin:Email"]!;
+        
+        var request = new { Email = adminEmail };
 
         // Act
         var response = await _client!.PostAsJsonAsync("/api/v1/auth/login", request, TestContext.CancellationTokenSource.Token);

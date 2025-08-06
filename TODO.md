@@ -5,7 +5,7 @@
 - [x] Input validation on registration in backend
 - [ ] Input validation on login form in frontend
 - [ ] Secure Admin role registration somehow
-- [ ] Example on how to generate/create the api secret for jwt in the readme
+- [ ] Example on how to generate/create the api secret for jwt in the readme for kubernetes
 
 ## Design Patterns Implementation (GoF Book)
 

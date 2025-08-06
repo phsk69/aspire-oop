@@ -113,6 +113,7 @@ builder.Services.AddAuthorization(options =>
 
 // Add services to the container.
 builder.Services.AddScoped<ITokenService, JwtTokenService>();
+builder.Services.AddScoped<IDataSeeder, DataSeeder>();
 builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -175,6 +176,10 @@ using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<AppIdentityDbContext>();
     dbContext.Database.EnsureCreated();
+    
+    // Run data seeder
+    var seeder = scope.ServiceProvider.GetRequiredService<IDataSeeder>();
+    await seeder.SeedAsync();
 }
 
 // Configure the HTTP request pipeline.

@@ -40,6 +40,8 @@ spec:
                 name: aspire-these-nutz
             - secretRef:
                 name: aspire-jwt-secret
+            - secretRef:
+                name: aspire-admin-seed
             - configMapRef:
                 name: aspire-api-config
           env:
