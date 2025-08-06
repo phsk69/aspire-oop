@@ -97,6 +97,11 @@ public class AuthController(
     [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request)
     {
+        _logger.LogInformation("Register endpoint called by user: {User}, IsAuthenticated: {IsAuth}, Claims: {Claims}", 
+            User.Identity?.Name, 
+            User.Identity?.IsAuthenticated,
+            string.Join(", ", User.Claims.Select(c => $"{c.Type}={c.Value}")));
+
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 

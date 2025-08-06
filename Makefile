@@ -1,14 +1,7 @@
-.PHONY: build run clean restore test publish dev web-dev docker-build-api docker-build-web docker-build k8s-generate k8s-deploy deploy k8s-status k8s-clean setup-tools token format shell-api shell-web
+.PHONY: build run clean restore test publish dev web-dev docker-build-api docker-build-web docker-build k8s-generate k8s-deploy deploy k8s-status k8s-clean token format shell-api shell-web update-minor
 
 # Default target
 all: restore build
-
-# Setup required tools
-setup-tools:
-	@echo "Installing required .NET tools..."
-	dotnet tool install -g aspirate || echo "aspirate already installed"
-	@echo "Tools installation complete!"
-	@echo "Note: Ensure Rancher Desktop is installed and configured with nerdctl for Kubernetes development"
 
 # Restore dependencies
 restore:
@@ -42,6 +35,10 @@ publish:
 # Format code
 format:
 	dotnet format
+
+# Update to latest minor/patch versions of dependencies
+update-minor:
+	dotnet outdated --version-lock major --upgrade
 
 # Docker build commands (using names that match generated manifests)
 docker-build-api:
