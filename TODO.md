@@ -2,10 +2,8 @@
 
 ## Immediate
 
-- [x] Input validation on registration in backend
-- [ ] Input validation on login form in frontend
-- [ ] Secure Admin role registration somehow
-- [ ] Example on how to generate/create the api secret for jwt in the readme for kubernetes
+- [ ] Demonstrate the token refresh logic/flow works - perhaps on a separate "user profile'ish" page
+- [ ] Kubernetes deployment 404 on something
 
 ## Design Patterns Implementation (GoF Book)
 
