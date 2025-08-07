@@ -1,6 +1,5 @@
 using AspireDeezNuts.ApiService.Data;
 using AspireDeezNuts.Shared.Models;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;

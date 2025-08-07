@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using AspireDeezNuts.Shared.Models;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 namespace AspireDeezNuts.ApiService.Controllers;
 

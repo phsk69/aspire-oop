@@ -1,10 +1,7 @@
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server;
-using Microsoft.AspNetCore.Identity;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using AspireDeezNuts.Web.Services;
-using Microsoft.Extensions.Options;
 
 namespace AspireDeezNuts.Web.Services;
 
