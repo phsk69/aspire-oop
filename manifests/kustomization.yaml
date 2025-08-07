@@ -4,6 +4,7 @@ kind: Kustomization
 resources:
   - secret.yaml
   - jwt-secret.yaml
+  - admin-seed-secret.yaml
   - configmap.yaml
   - pvc.yaml
   - cert-manager-issuer.yaml

@@ -9,6 +9,8 @@ using Microsoft.AspNetCore.Components.Server;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Components.Authorization;
+using System.Globalization;
+using Microsoft.AspNetCore.Localization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -114,7 +116,28 @@ builder.Services.AddHttpClient("authenticated-api", client =>
     }
 }).AddHttpMessageHandler<AuthorizedHttpMessageHandler>();
 
+// Configure localization to use British English
+builder.Services.Configure<RequestLocalizationOptions>(options =>
+{
+    var supportedCultures = new[] { new CultureInfo("en-GB") };
+    options.DefaultRequestCulture = new RequestCulture("en-GB");
+    options.SupportedCultures = supportedCultures;
+    options.SupportedUICultures = supportedCultures;
+    options.FallBackToParentCultures = false;
+    options.FallBackToParentUICultures = false;
+});
+
 var app = builder.Build();
+
+// Configure localization middleware
+app.UseRequestLocalization(new RequestLocalizationOptions
+{
+    DefaultRequestCulture = new RequestCulture("en-GB"),
+    SupportedCultures = new[] { new CultureInfo("en-GB") },
+    SupportedUICultures = new[] { new CultureInfo("en-GB") },
+    FallBackToParentCultures = false,
+    FallBackToParentUICultures = false
+});
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

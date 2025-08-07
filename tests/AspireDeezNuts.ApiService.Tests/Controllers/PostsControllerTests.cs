@@ -31,15 +31,8 @@ public class PostsControllerTests
         // Use configuration from local secrets file
         var testConfig = new ConfigurationBuilder()
             .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
             .AddJsonFile("appsettings.Development.secrets.json", optional: false, reloadOnChange: false)
-            .AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["Jwt:Issuer"] = "AspireDeezNuts",
-                ["Jwt:Audience"] = "AspireDeezNutsUsers",
-                ["Jwt:AccessTokenExpiryMinutes"] = "15",
-                ["Jwt:RefreshTokenExpiryDays"] = "7",
-                ["UseInMemoryDatabase"] = "true"
-            })
             .Build();
 
         _factory = new WebApplicationFactory<Program>()

@@ -25,6 +25,13 @@ public class UpdateUserDto
     public bool? EmailConfirmed { get; set; }
 }
 
+public class PatchUserDto
+{
+    public string? Email { get; set; }
+    public string? UserName { get; set; }
+    public bool? EmailConfirmed { get; set; }
+}
+
 public class UserRoleUpdateDto
 {
     public string UserId { get; set; } = string.Empty;

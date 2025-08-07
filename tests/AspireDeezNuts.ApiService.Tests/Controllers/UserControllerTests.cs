@@ -24,15 +24,8 @@ public class UserControllerTests
     {
         var testConfig = new ConfigurationBuilder()
             .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
             .AddJsonFile("appsettings.Development.secrets.json", optional: false, reloadOnChange: false)
-            .AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["Jwt:Issuer"] = "AspireDeezNuts",
-                ["Jwt:Audience"] = "AspireDeezNutsUsers",
-                ["Jwt:AccessTokenExpiryMinutes"] = "15",
-                ["Jwt:RefreshTokenExpiryDays"] = "7",
-                ["UseInMemoryDatabase"] = "true"
-            })
             .Build();
 
         _sharedFactory = new WebApplicationFactory<Program>()
@@ -388,6 +381,204 @@ public class UserControllerTests
         Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync(TestContext.CancellationTokenSource.Token);
         Assert.Contains("User with ID nonexistent-id not found", content);
+    }
+
+    #endregion
+
+    #region PatchUser Tests
+
+    [TestMethod]
+    public async Task PatchUser_WithValidData_ShouldReturnUpdatedUser()
+    {
+        _client!.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _adminToken);
+
+        var createUserDto = new CreateUserDto
+        {
+            Email = "patchme@test.com",
+            UserName = "patchme",
+            Password = "ValidPass123!",
+            IsAdmin = false
+        };
+
+        var createResponse = await _client.PostAsJsonAsync("/api/v1/user", createUserDto, TestContext.CancellationTokenSource.Token);
+        var createdUser = await createResponse.Content.ReadFromJsonAsync<UserDto>(TestContext.CancellationTokenSource.Token);
+
+        var patchUserDto = new PatchUserDto
+        {
+            Email = "patched@test.com",
+            UserName = "patcheduser"
+        };
+
+        var response = await _client.PatchAsJsonAsync($"/api/v1/user/{createdUser!.Id}", patchUserDto, TestContext.CancellationTokenSource.Token);
+
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        var updatedUser = await response.Content.ReadFromJsonAsync<UserDto>(TestContext.CancellationTokenSource.Token);
+        Assert.IsNotNull(updatedUser);
+        Assert.AreEqual("patched@test.com", updatedUser.Email);
+        Assert.AreEqual("patcheduser", updatedUser.UserName);
+        Assert.AreEqual(createdUser.Id, updatedUser.Id);
+    }
+
+    [TestMethod]
+    public async Task PatchUser_WithPartialData_ShouldUpdateOnlyProvidedFields()
+    {
+        _client!.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _adminToken);
+
+        var createUserDto = new CreateUserDto
+        {
+            Email = "partial@test.com",
+            UserName = "partialuser",
+            Password = "ValidPass123!",
+            IsAdmin = false
+        };
+
+        var createResponse = await _client.PostAsJsonAsync("/api/v1/user", createUserDto, TestContext.CancellationTokenSource.Token);
+        var createdUser = await createResponse.Content.ReadFromJsonAsync<UserDto>(TestContext.CancellationTokenSource.Token);
+
+        var patchUserDto = new PatchUserDto
+        {
+            Email = "partialupdate@test.com"
+            // UserName not provided - should remain unchanged
+        };
+
+        var response = await _client.PatchAsJsonAsync($"/api/v1/user/{createdUser!.Id}", patchUserDto, TestContext.CancellationTokenSource.Token);
+
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        var updatedUser = await response.Content.ReadFromJsonAsync<UserDto>(TestContext.CancellationTokenSource.Token);
+        Assert.IsNotNull(updatedUser);
+        Assert.AreEqual("partialupdate@test.com", updatedUser.Email);
+        Assert.AreEqual("partialuser", updatedUser.UserName); // Should remain unchanged
+    }
+
+    [TestMethod]
+    public async Task PatchUser_WithEmailConfirmed_ShouldUpdateEmailConfirmed()
+    {
+        _client!.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _adminToken);
+
+        var createUserDto = new CreateUserDto
+        {
+            Email = "confirmme@test.com",
+            UserName = "confirmme",
+            Password = "ValidPass123!",
+            IsAdmin = false
+        };
+
+        var createResponse = await _client.PostAsJsonAsync("/api/v1/user", createUserDto, TestContext.CancellationTokenSource.Token);
+        var createdUser = await createResponse.Content.ReadFromJsonAsync<UserDto>(TestContext.CancellationTokenSource.Token);
+
+        var patchUserDto = new PatchUserDto
+        {
+            EmailConfirmed = false
+        };
+
+        var response = await _client.PatchAsJsonAsync($"/api/v1/user/{createdUser!.Id}", patchUserDto, TestContext.CancellationTokenSource.Token);
+
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        var updatedUser = await response.Content.ReadFromJsonAsync<UserDto>(TestContext.CancellationTokenSource.Token);
+        Assert.IsNotNull(updatedUser);
+        Assert.IsFalse(updatedUser.EmailConfirmed);
+        Assert.AreEqual(createdUser.Email, updatedUser.Email); // Should remain unchanged
+        Assert.AreEqual(createdUser.UserName, updatedUser.UserName); // Should remain unchanged
+    }
+
+    [TestMethod]
+    public async Task PatchUser_WithEmptyPatch_ShouldReturnOkWithoutChanges()
+    {
+        _client!.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _adminToken);
+
+        var createUserDto = new CreateUserDto
+        {
+            Email = "nochange@test.com",
+            UserName = "nochange",
+            Password = "ValidPass123!",
+            IsAdmin = false
+        };
+
+        var createResponse = await _client.PostAsJsonAsync("/api/v1/user", createUserDto, TestContext.CancellationTokenSource.Token);
+        var createdUser = await createResponse.Content.ReadFromJsonAsync<UserDto>(TestContext.CancellationTokenSource.Token);
+
+        var patchUserDto = new PatchUserDto(); // All fields null
+
+        var response = await _client.PatchAsJsonAsync($"/api/v1/user/{createdUser!.Id}", patchUserDto, TestContext.CancellationTokenSource.Token);
+
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        var updatedUser = await response.Content.ReadFromJsonAsync<UserDto>(TestContext.CancellationTokenSource.Token);
+        Assert.IsNotNull(updatedUser);
+        Assert.AreEqual(createdUser.Email, updatedUser.Email);
+        Assert.AreEqual(createdUser.UserName, updatedUser.UserName);
+        Assert.AreEqual(createdUser.EmailConfirmed, updatedUser.EmailConfirmed);
+    }
+
+    [TestMethod]
+    public async Task PatchUser_WithNonExistentId_ShouldReturnNotFound()
+    {
+        _client!.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _adminToken);
+
+        var patchUserDto = new PatchUserDto
+        {
+            Email = "updated@test.com"
+        };
+
+        var response = await _client.PatchAsJsonAsync("/api/v1/user/nonexistent-id", patchUserDto, TestContext.CancellationTokenSource.Token);
+
+        Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync(TestContext.CancellationTokenSource.Token);
+        Assert.Contains("User with ID nonexistent-id not found", content);
+    }
+
+    [TestMethod]
+    public async Task PatchUser_WithoutAuthentication_ShouldReturnUnauthorized()
+    {
+        _client!.DefaultRequestHeaders.Authorization = null;
+
+        var patchUserDto = new PatchUserDto
+        {
+            Email = "test@test.com"
+        };
+
+        var response = await _client.PatchAsJsonAsync("/api/v1/user/some-id", patchUserDto, TestContext.CancellationTokenSource.Token);
+
+        Assert.AreEqual(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [TestMethod]
+    public async Task PatchUser_WithUserRole_ShouldReturnForbidden()
+    {
+        _client!.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _adminToken);
+
+        // Create a regular user
+        var regularUser = new RegisterRequest
+        {
+            Email = "regularpatch@test.com",
+            Password = "RegularPass123!",
+            Role = "User"
+        };
+
+        await _client.PostAsJsonAsync("/api/v1/auth/register", regularUser, TestContext.CancellationTokenSource.Token);
+
+        // Login as regular user
+        _client.DefaultRequestHeaders.Authorization = null;
+        var loginRequest = new { Email = "regularpatch@test.com", Password = "RegularPass123!" };
+        var loginResponse = await _client.PostAsJsonAsync("/api/v1/auth/login", loginRequest, TestContext.CancellationTokenSource.Token);
+        var loginContent = await loginResponse.Content.ReadFromJsonAsync<LoginResponse>(TestContext.CancellationTokenSource.Token);
+
+        _client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", loginContent?.AccessToken);
+
+        var patchUserDto = new PatchUserDto
+        {
+            Email = "test@test.com"
+        };
+
+        var response = await _client.PatchAsJsonAsync("/api/v1/user/some-id", patchUserDto, TestContext.CancellationTokenSource.Token);
+
+        Assert.AreEqual(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     #endregion

@@ -7,6 +7,9 @@ FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
+# Copy global build configuration
+COPY ["Directory.Build.props", "Directory.Build.props"]
+
 # Copy project files
 COPY ["src/AspireDeezNuts.Web/AspireDeezNuts.Web.csproj", "src/AspireDeezNuts.Web/"]
 COPY ["src/AspireDeezNuts.Shared/AspireDeezNuts.Shared.csproj", "src/AspireDeezNuts.Shared/"]

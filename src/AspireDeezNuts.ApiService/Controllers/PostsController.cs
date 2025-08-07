@@ -67,8 +67,8 @@ public class PostsController(
         }
     }
 
-    [HttpGet("user/{userId:int}")]
-    public async Task<ActionResult<IEnumerable<Post>>> GetPostsByUser(int userId)
+    [HttpGet("user/{userId:long}")]
+    public async Task<ActionResult<IEnumerable<Post>>> GetPostsByUser(long userId)
     {
         try
         {

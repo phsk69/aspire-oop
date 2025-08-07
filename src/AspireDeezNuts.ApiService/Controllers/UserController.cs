@@ -216,6 +216,68 @@ public class UserController(
         }
     }
 
+    [HttpPatch("{id}")]
+    public async Task<ActionResult<UserDto>> PatchUser(string id, [FromBody] PatchUserDto patchUserDto)
+    {
+        try
+        {
+            var adminEmail = User.Identity?.Name;
+            var adminUser = await _userManager.FindByEmailAsync(adminEmail ?? "");
+            _logger.LogInformation("User: {UserId} - Requested to patch user {TargetUserId}", adminUser?.Id ?? "Unknown", id);
+            
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null)
+            {
+                _logger.LogWarning("User: {UserId} - User with ID {TargetUserId} not found for patch", adminUser?.Id ?? "Unknown", id);
+                return NotFound($"User with ID {id} not found");
+            }
+
+            // Update only provided fields
+            if (!string.IsNullOrEmpty(patchUserDto.Email))
+            {
+                user.Email = patchUserDto.Email;
+            }
+
+            if (!string.IsNullOrEmpty(patchUserDto.UserName))
+            {
+                user.UserName = patchUserDto.UserName;
+            }
+
+            if (patchUserDto.EmailConfirmed.HasValue)
+            {
+                user.EmailConfirmed = patchUserDto.EmailConfirmed.Value;
+            }
+
+            var updateResult = await _userManager.UpdateAsync(user);
+            if (!updateResult.Succeeded)
+            {
+                _logger.LogError("User: {UserId} - Failed to patch user {TargetUserId}. Errors: {Errors}", adminUser?.Id ?? "Unknown", id, string.Join(", ", updateResult.Errors.Select(e => e.Description)));
+                return BadRequest(updateResult.Errors);
+            }
+
+            // Return updated user data
+            var roles = await _userManager.GetRolesAsync(user);
+            var userDto = new UserDto
+            {
+                Id = user.Id,
+                Email = user.Email ?? string.Empty,
+                UserName = user.UserName ?? string.Empty,
+                EmailConfirmed = user.EmailConfirmed,
+                Roles = [.. roles]
+            };
+
+            _logger.LogInformation("User: {UserId} - Successfully patched user {TargetUserId}", adminUser?.Id ?? "Unknown", id);
+            return Ok(userDto);
+        }
+        catch (Exception ex)
+        {
+            var adminEmail = User.Identity?.Name;
+            var adminUser = await _userManager.FindByEmailAsync(adminEmail ?? "");
+            _logger.LogError(ex, "User: {UserId} - Error patching user {TargetUserId}", adminUser?.Id ?? "Unknown", id);
+            return StatusCode(500, "An error occurred while patching the user");
+        }
+    }
+
     [HttpPost("{id}/roles")]
     public async Task<ActionResult> UpdateUserRole(string id, [FromBody] UserRoleUpdateDto roleUpdate)
     {

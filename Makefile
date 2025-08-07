@@ -1,4 +1,4 @@
-.PHONY: build run clean restore test publish dev web-dev docker-build-api docker-build-web docker-build k8s-generate k8s-deploy deploy k8s-status k8s-clean token format shell-api shell-web update-minor
+.PHONY: build run clean restore test dev web-dev docker-build-api docker-build-web docker-build k8s-generate k8s-deploy deploy k8s-status k8s-clean token format shell-api shell-web update-minor
 
 # Default target
 all: restore build
@@ -22,15 +22,11 @@ dev:
 # Clean build artifacts
 clean:
 	dotnet clean
-	find . -type d \( -name "bin" -o -name "obj" \) -exec rm -rf {} +
+	find . -type d \( -name "bin" -o -name "obj" \) -exec rm -rf {} + 2>/dev/null || true
 
 # Run tests
 test:
 	dotnet test --verbosity normal
-
-# Publish the application
-publish:
-	dotnet publish -c Release -o ./publish
 
 # Format code
 format:

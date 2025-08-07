@@ -1,0 +1,25 @@
+<Project>
+  <!-- Language and Culture Settings -->
+  <PropertyGroup>
+    <!-- Build only for English language -->
+    <SatelliteResourceLanguages>en-GB</SatelliteResourceLanguages>
+    
+    <!-- Set neutral resources language to British English -->
+    <NeutralLanguage>en-GB</NeutralLanguage>
+    
+    <!-- Disable localization for better performance and smaller output -->
+    <EnableDefaultCompileItems>true</EnableDefaultCompileItems>
+    <EnableDefaultEmbeddedResourceItems>true</EnableDefaultEmbeddedResourceItems>
+    
+    <!-- Set invariant globalization to false to allow culture-specific formatting -->
+    <InvariantGlobalization>false</InvariantGlobalization>
+  </PropertyGroup>
+
+  <!-- Runtime configuration for culture settings -->
+  <ItemGroup>
+    <RuntimeHostConfigurationOption Include="System.Globalization.Invariant" Value="false" />
+    <RuntimeHostConfigurationOption Include="System.Globalization.UseNls" Value="true" />
+  </ItemGroup>
+
+
+</Project>

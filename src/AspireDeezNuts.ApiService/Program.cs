@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using System.Globalization;
+using Microsoft.AspNetCore.Localization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -169,6 +171,17 @@ builder.Services.AddHttpClient<AspireDeezNuts.Shared.Interfaces.IPostRepository,
     client.Timeout = TimeSpan.FromSeconds(timeout);
 });
 
+// Configure localization to use British English
+builder.Services.Configure<RequestLocalizationOptions>(options =>
+{
+    var supportedCultures = new[] { new CultureInfo("en-GB") };
+    options.DefaultRequestCulture = new RequestCulture("en-GB");
+    options.SupportedCultures = supportedCultures;
+    options.SupportedUICultures = supportedCultures;
+    options.FallBackToParentCultures = false;
+    options.FallBackToParentUICultures = false;
+});
+
 var app = builder.Build();
 
 // Ensure database is created and seeded
@@ -195,6 +208,16 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Configure localization middleware
+app.UseRequestLocalization(new RequestLocalizationOptions
+{
+    DefaultRequestCulture = new RequestCulture("en-GB"),
+    SupportedCultures = new[] { new CultureInfo("en-GB") },
+    SupportedUICultures = new[] { new CultureInfo("en-GB") },
+    FallBackToParentCultures = false,
+    FallBackToParentUICultures = false
+});
 
 app.UseAuthentication();
 app.UseAuthorization();
