@@ -1,0 +1,617 @@
+@page "/profile"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using System.Text.Json
+@using AspireDeezNuts.Web.Services
+@using AspireDeezNuts.Shared.Models
+@using Microsoft.AspNetCore.SignalR.Client
+@using BlazorBootstrap
+@attribute [Authorize]
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IAuthService AuthService
+@inject ITokenInfoService TokenInfoService
+@inject IToastService ToastService
+@inject ILogger<Profile> Logger
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager Navigation
+@inject IRateLimitingService RateLimitingService
+@implements IAsyncDisposable
+@rendermode InteractiveServer
+
+<PageTitle>User Profile</PageTitle>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex align-items-center mb-4">
+                <Icon Name="IconName.PersonCircle" Size="IconSize.x2" class="text-primary me-3" />
+                <div>
+                    <h1 class="display-6 mb-0">User Profile</h1>
+                    <p class="text-muted mb-0">Manage your account and view token information</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- User Information Card -->
+        <div class="col-lg-6">
+            <Card>
+                <CardHeader>
+                    <Icon Name="IconName.InfoCircle" class="me-2" />
+                    User Information
+                </CardHeader>
+                <CardBody>
+                    @if (currentUser != null)
+                    {
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <div class="d-flex align-items-center">
+                                    <Badge Color="BadgeColor.Primary" class="me-2">
+                                        <Icon Name="IconName.Envelope" class="me-1" />
+                                        Email
+                                    </Badge>
+                                    <span class="fw-semibold">@currentUser.FindFirst(ClaimTypes.Name)?.Value</span>
+                                </div>
+                            </div>
+                            @if (userRoles.Any())
+                            {
+                                <div class="col-12">
+                                    <div class="d-flex align-items-center flex-wrap">
+                                        <Badge Color="BadgeColor.Success" class="me-2 mb-1">
+                                            <Icon Name="IconName.Shield" class="me-1" />
+                                            Roles
+                                        </Badge>
+                                        @foreach (var role in userRoles)
+                                        {
+                                            <Badge Color="@(role == "Admin" ? BadgeColor.Danger : BadgeColor.Info)" class="me-1 mb-1">
+                                                @role
+                                            </Badge>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                            <div class="col-12">
+                                <div class="d-flex align-items-center">
+                                    <Badge Color="BadgeColor.Secondary" class="me-2">
+                                        <Icon Name="IconName.Clock" class="me-1" />
+                                        Status
+                                    </Badge>
+                                    <Badge Color="BadgeColor.Success">
+                                        <Icon Name="IconName.CheckCircle" class="me-1" />
+                                        Authenticated
+                                    </Badge>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </CardBody>
+            </Card>
+        </div>
+
+        <!-- Token Status Card -->
+        <div class="col-lg-6">
+            <Card>
+                <CardHeader>
+                    <Icon Name="IconName.Key" class="me-2" />
+                    Token Status
+                    <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small" class="ms-auto" @onclick="RefreshTokenInfo">
+                        <Icon Name="IconName.ArrowClockwise" class="me-1" />
+                        Refresh
+                    </Button>
+                </CardHeader>
+                <CardBody>
+                    @if (tokenInfo != null)
+                    {
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <Badge Color="BadgeColor.Info">
+                                        <Icon Name="IconName.Hourglass" class="me-1" />
+                                        Expires In
+                                    </Badge>
+                                    <div class="text-end">
+                                        @if (tokenInfo.IsExpired)
+                                        {
+                                            <Badge Color="BadgeColor.Danger">
+                                                <Icon Name="IconName.ExclamationTriangle" class="me-1" />
+                                                EXPIRED
+                                            </Badge>
+                                        }
+                                        else
+                                        {
+                                            <span class="fw-bold text-success">@FormatTimeSpan(tokenInfo.TimeUntilExpiry)</span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar @GetProgressBarClass()" 
+                                         role="progressbar" 
+                                         style="width: @GetProgressPercentage()%">
+                                    </div>
+                                </div>
+                                <small class="text-muted">Token validity remaining</small>
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted">Issued</small>
+                                <div class="fw-semibold">@tokenInfo.IssuedAt.ToString("HH:mm:ss")</div>
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted">Expires</small>
+                                <div class="fw-semibold">@tokenInfo.ExpiresAt.ToString("HH:mm:ss")</div>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <Alert Color="AlertColor.Warning">
+                            <Icon Name="IconName.ExclamationTriangle" class="me-2" />
+                            Unable to parse token information
+                        </Alert>
+                    }
+                </CardBody>
+            </Card>
+        </div>
+    </div>
+
+    <!-- Token Refresh Demo Section -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <Card>
+                <CardHeader>
+                    <Icon Name="IconName.ArrowRepeat" class="me-2" />
+                    Token Refresh Demo
+                    <Badge Color="BadgeColor.Success" class="ms-2">
+                        <Icon Name="IconName.PlayFill" class="me-1" />
+                        Interactive
+                    </Badge>
+                </CardHeader>
+                <CardBody>
+                    <div class="row g-4">
+                        <div class="col-md-8">
+                            <p class="mb-3">
+                                <Icon Name="IconName.InfoCircle" class="text-info me-1" />
+                                Demonstrate the JWT token refresh functionality by manually refreshing your access token.
+                                This shows how the application maintains authentication without requiring re-login.
+                            </p>
+                            
+                            <div class="d-grid gap-2 d-md-flex">
+                                <Button Color="ButtonColor.Primary" Size="ButtonSize.Large" @onclick="RefreshAccessToken" Disabled="@isRefreshing">
+                                    @if (isRefreshing)
+                                    {
+                                        <Spinner Size="SpinnerSize.Small" class="me-2" />
+                                        <span>Refreshing...</span>
+                                    }
+                                    else
+                                    {
+                                        <Icon Name="IconName.ArrowClockwise" class="me-2" />
+                                        <span>Refresh Access Token</span>
+                                    }
+                                </Button>
+                                
+                                <Button Color="ButtonColor.Secondary" @onclick="ShowTokenDetails">
+                                    <Icon Name="IconName.Eye" class="me-1" />
+                                    View Token Details
+                                </Button>
+                                
+                                <Button Color="ButtonColor.Warning" @onclick="TestButtonClick">
+                                    <Icon Name="IconName.Bug" class="me-1" />
+                                    Test Click
+                                </Button>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                @if (lastRefreshTime.HasValue)
+                                {
+                                    <div class="border rounded p-3 bg-light">
+                                        <Icon Name="IconName.CheckCircle" Size="IconSize.x2" class="text-success mb-2" />
+                                        <div class="small text-muted mb-1">Last Refresh</div>
+                                        <div class="fw-bold">@lastRefreshTime.Value.ToString("HH:mm:ss")</div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="border rounded p-3 bg-light">
+                                        <Icon Name="IconName.Clock" Size="IconSize.x2" class="text-muted mb-2" />
+                                        <div class="small text-muted">No refresh yet</div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </CardBody>
+            </Card>
+        </div>
+    </div>
+
+    <!-- Token Details Modal -->
+    <Modal @ref="tokenDetailsModal" Title="JWT Token Details" Size="ModalSize.Large">
+        <BodyTemplate>
+            @if (tokenInfo != null)
+            {
+                <Tabs>
+                    <Tab Title="Overview" IsActive="true">
+                        <Content>
+                                <div class="row g-3 mt-2">
+                                    <div class="col-sm-4">
+                                        <small class="text-muted">User Email</small>
+                                        <div class="fw-semibold">@tokenInfo.UserEmail</div>
+                                    </div>
+                                    <div class="col-sm-4">
+                                        <small class="text-muted">User ID</small>
+                                        <div class="fw-semibold font-monospace">@(tokenInfo.UserId?[..8] ?? "N/A")...</div>
+                                    </div>
+                                    <div class="col-sm-4">
+                                        <small class="text-muted">Issuer</small>
+                                        <div class="fw-semibold">@tokenInfo.Issuer</div>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <small class="text-muted">Issued At</small>
+                                        <div class="fw-semibold">@tokenInfo.IssuedAt.ToString("yyyy-MM-dd HH:mm:ss") UTC</div>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <small class="text-muted">Expires At</small>
+                                        <div class="fw-semibold">@tokenInfo.ExpiresAt.ToString("yyyy-MM-dd HH:mm:ss") UTC</div>
+                                    </div>
+                                </div>
+                        </Content>
+                    </Tab>
+                    <Tab Title="Claims">
+                        <Content>
+                                <div class="mt-2">
+                                    @foreach (var claim in tokenInfo.Claims.Where(c => !c.Key.Contains("token")))
+                                    {
+                                        <div class="row border-bottom py-2">
+                                            <div class="col-4">
+                                                <Badge Color="BadgeColor.Secondary">@GetClaimDisplayName(claim.Key)</Badge>
+                                            </div>
+                                            <div class="col-8">
+                                                <code class="small">@claim.Value</code>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                        </Content>
+                    </Tab>
+                    <Tab Title="Security">
+                        <Content>
+                                <div class="mt-2">
+                                    <Alert Color="@(tokenInfo.IsExpired ? AlertColor.Danger : AlertColor.Success)">
+                                        <Icon Name="@(tokenInfo.IsExpired ? IconName.ExclamationTriangle : IconName.Shield)" class="me-2" />
+                                        Token is @(tokenInfo.IsExpired ? "EXPIRED" : "VALID")
+                                    </Alert>
+                                    
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <div class="border rounded p-3">
+                                                <div class="d-flex align-items-center mb-2">
+                                                    <Icon Name="IconName.Clock" class="me-2" />
+                                                    <strong>Time Remaining</strong>
+                                                </div>
+                                                <div class="fs-4 fw-bold text-primary">@FormatTimeSpan(tokenInfo.TimeUntilExpiry)</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="border rounded p-3">
+                                                <div class="d-flex align-items-center mb-2">
+                                                    <Icon Name="IconName.Speedometer" class="me-2" />
+                                                    <strong>Token Age</strong>
+                                                </div>
+                                                <div class="fs-4 fw-bold text-info">@FormatTimeSpan(DateTime.UtcNow - tokenInfo.IssuedAt)</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                        </Content>
+                    </Tab>
+                </Tabs>
+            }
+        </BodyTemplate>
+        <FooterTemplate>
+            <Button Color="ButtonColor.Secondary" @onclick="HideTokenDetailsModal">
+                <Icon Name="IconName.X" class="me-1" />
+                Close
+            </Button>
+        </FooterTemplate>
+    </Modal>
+</div>
+
+@code {
+    private ClaimsPrincipal? currentUser;
+    private List<string> userRoles = new();
+    private TokenInfo? tokenInfo;
+    private bool isRefreshing;
+    private DateTime? lastRefreshTime;
+    private Modal tokenDetailsModal = default!;
+    private Timer? tokenUpdateTimer;
+    private HubConnection? hubConnection;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshTokenInfo();
+        
+        // Initialize SignalR connection for real-time token updates
+        await InitializeSignalRConnection();
+        
+        // Set up timer to update token info every second for live countdown
+        tokenUpdateTimer = new Timer(async _ => 
+        {
+            await InvokeAsync(() => 
+            {
+                StateHasChanged();
+            });
+        }, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+    }
+
+    private async Task RefreshTokenInfo()
+    {
+        try
+        {
+            Logger.LogInformation("RefreshTokenInfo called - getting authentication state");
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            currentUser = authState.User;
+            
+            Logger.LogInformation("User authenticated: {IsAuthenticated}, User name: {UserName}", 
+                currentUser.Identity?.IsAuthenticated, currentUser.Identity?.Name);
+            
+            if (currentUser.Identity?.IsAuthenticated == true)
+            {
+                userRoles = currentUser.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
+                Logger.LogInformation("Found {RoleCount} roles: {Roles}", userRoles.Count, string.Join(", ", userRoles));
+                
+                var accessTokenClaim = currentUser.FindFirst("access_token");
+                if (accessTokenClaim != null)
+                {
+                    Logger.LogInformation("Found access token claim, parsing with TokenInfoService");
+                    tokenInfo = TokenInfoService.GetTokenInfo(accessTokenClaim.Value);
+                    Logger.LogInformation("Token parsed. Expires at: {ExpiresAt}, Is expired: {IsExpired}", 
+                        tokenInfo?.ExpiresAt, tokenInfo?.IsExpired);
+                }
+                else
+                {
+                    Logger.LogWarning("No access_token claim found in user claims. Available claims: {Claims}", 
+                        string.Join(", ", currentUser.Claims.Select(c => c.Type)));
+                }
+            }
+            else
+            {
+                Logger.LogWarning("User is not authenticated");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error refreshing token information");
+            ToastService.ShowError("Failed to refresh token information");
+        }
+    }
+
+    private async Task RefreshAccessToken()
+    {
+        if (isRefreshing) return;
+        
+        // Rate limit token refresh to prevent rapid successive clicks
+        var operationKey = $"token-refresh-{currentUser?.Identity?.Name}";
+        var timeWindow = TimeSpan.FromSeconds(3); // Allow only 1 refresh every 3 seconds
+        
+        var executed = await RateLimitingService.TryExecuteAsync(operationKey, async () =>
+        {
+            isRefreshing = true;
+            StateHasChanged(); // Force UI update immediately
+            
+            try
+            {
+                Logger.LogInformation("User clicked RefreshAccessToken button - starting token refresh");
+                
+                var oldTokenInfo = tokenInfo;
+                Logger.LogInformation("Old token expires at: {OldExpiry}", oldTokenInfo?.ExpiresAt.ToString("HH:mm:ss"));
+                
+                // Test the simple refresh endpoint that's authenticated 
+                var refreshResult = await AuthService.RefreshTokenAsync();
+                
+                Logger.LogInformation("AuthService.RefreshTokenAsync returned: {HasToken}", !string.IsNullOrEmpty(refreshResult));
+                
+                if (!string.IsNullOrEmpty(refreshResult))
+                {
+                    lastRefreshTime = DateTime.Now;
+                    
+                    // Force re-read of authentication state
+                    await RefreshTokenInfo();
+                    
+                    ToastService.ShowSuccess($"Token refreshed! New expiry: {tokenInfo?.ExpiresAt.ToString("HH:mm:ss")}");
+                    
+                    Logger.LogInformation("Profile token refresh completed. Old: {OldExpiry}, New: {NewExpiry}", 
+                        oldTokenInfo?.ExpiresAt.ToString("HH:mm:ss"), tokenInfo?.ExpiresAt.ToString("HH:mm:ss"));
+                }
+                else
+                {
+                    ToastService.ShowError("Token refresh failed - please try logging in again");
+                    Logger.LogWarning("Token refresh returned null/empty - refresh failed");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Exception during profile token refresh");
+                ToastService.ShowError($"Token refresh error: {ex.Message}");
+            }
+            finally
+            {
+                isRefreshing = false;
+                StateHasChanged(); // Force UI update
+            }
+        }, timeWindow, maxAttempts: 1);
+        
+        if (!executed)
+        {
+            ToastService.ShowWarning("Please wait before refreshing again");
+            Logger.LogWarning("Token refresh rate limited for operation key: {OperationKey}", operationKey);
+        }
+    }
+
+    private async Task ShowTokenDetails()
+    {
+        Logger.LogInformation("ShowTokenDetails button clicked");
+        await tokenDetailsModal.ShowAsync();
+        Logger.LogInformation("Modal ShowAsync completed");
+    }
+
+    private async Task HideTokenDetailsModal()
+    {
+        await tokenDetailsModal.HideAsync();
+    }
+
+    private async Task TestButtonClick()
+    {
+        Logger.LogInformation("TEST BUTTON CLICKED! Button clicks are working!");
+        ToastService.ShowSuccess("Test button clicked successfully!");
+        await Task.Delay(100); // Just to make it async
+    }
+
+    private string FormatTimeSpan(TimeSpan timeSpan)
+    {
+        if (timeSpan <= TimeSpan.Zero)
+            return "Expired";
+            
+        if (timeSpan.TotalDays >= 1)
+            return $"{(int)timeSpan.TotalDays}d {timeSpan.Hours}h {timeSpan.Minutes}m";
+        
+        if (timeSpan.TotalHours >= 1)
+            return $"{(int)timeSpan.TotalHours}h {timeSpan.Minutes}m {timeSpan.Seconds}s";
+            
+        return $"{timeSpan.Minutes}m {timeSpan.Seconds}s";
+    }
+
+    private string GetProgressBarClass()
+    {
+        if (tokenInfo?.TimeUntilExpiry.TotalMinutes > 30)
+            return "bg-success";
+        if (tokenInfo?.TimeUntilExpiry.TotalMinutes > 10)
+            return "bg-warning";
+        return "bg-danger";
+    }
+
+    private double GetProgressPercentage()
+    {
+        if (tokenInfo == null) return 0;
+        
+        var totalDuration = tokenInfo.ExpiresAt - tokenInfo.IssuedAt;
+        var remaining = tokenInfo.TimeUntilExpiry;
+        
+        if (totalDuration.TotalSeconds <= 0) return 0;
+        
+        var percentage = (remaining.TotalSeconds / totalDuration.TotalSeconds) * 100;
+        return Math.Max(0, Math.Min(100, percentage));
+    }
+
+    private string GetClaimDisplayName(string claimType)
+    {
+        return claimType switch
+        {
+            ClaimTypes.Name => "Name",
+            ClaimTypes.Email => "Email",
+            ClaimTypes.NameIdentifier => "User ID",
+            ClaimTypes.Role => "Role",
+            "iss" => "Issuer",
+            "aud" => "Audience",
+            "exp" => "Expires",
+            "iat" => "Issued At",
+            "nbf" => "Not Before",
+            "jti" => "JWT ID",
+            _ => claimType
+        };
+    }
+
+    private async Task InitializeSignalRConnection()
+    {
+        try
+        {
+            // In Blazor Server, authentication is handled via cookies
+            hubConnection = new HubConnectionBuilder()
+                .WithUrl(Navigation.ToAbsoluteUri("/authHub"))
+                .WithAutomaticReconnect()
+                .Build();
+
+            // Subscribe to token refresh events
+            hubConnection.On<object>("TokenRefreshed", async (tokenData) =>
+            {
+                Logger.LogInformation("Received SignalR TokenRefreshed notification");
+                
+                await InvokeAsync(async () =>
+                {
+                    try
+                    {
+                        // Refresh token info from authentication state
+                        await RefreshTokenInfo();
+                        
+                        // Show toast notification about automatic refresh
+                        ToastService.ShowInfo("Token automatically refreshed by system");
+                        Logger.LogInformation("UI updated after receiving SignalR token refresh notification");
+                        
+                        StateHasChanged();
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError(ex, "Error updating UI after SignalR token refresh notification");
+                    }
+                });
+            });
+
+            // Subscribe to auth state change events
+            hubConnection.On<object>("AuthStateChanged", async (authData) =>
+            {
+                Logger.LogInformation("Received SignalR AuthStateChanged notification");
+                
+                await InvokeAsync(async () =>
+                {
+                    try
+                    {
+                        await RefreshTokenInfo();
+                        ToastService.ShowWarning("Authentication state changed");
+                        Logger.LogInformation("UI updated after receiving SignalR auth state change notification");
+                        
+                        StateHasChanged();
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError(ex, "Error updating UI after SignalR auth state change notification");
+                    }
+                });
+            });
+
+            // Start the connection
+            await hubConnection.StartAsync();
+            Logger.LogInformation("SignalR connection established successfully");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error initializing SignalR connection");
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        tokenUpdateTimer?.Dispose();
+        
+        if (hubConnection is not null)
+        {
+            try
+            {
+                await hubConnection.DisposeAsync();
+                Logger.LogInformation("SignalR connection disposed");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error disposing SignalR connection");
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        tokenUpdateTimer?.Dispose();
+    }
+}

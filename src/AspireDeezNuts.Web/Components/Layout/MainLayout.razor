@@ -27,6 +27,15 @@
                             <Icon Name="IconName.ListNested" /> Posts
                         </NavLink>
                     </li>
+                    <AuthorizeView>
+                        <Authorized>
+                            <li class="nav-item">
+                                <NavLink class="nav-link" href="profile">
+                                    <Icon Name="IconName.PersonCircle" /> Profile
+                                </NavLink>
+                            </li>
+                        </Authorized>
+                    </AuthorizeView>
                     <AuthorizeView Roles="Admin">
                         <Authorized>
                             <li class="nav-item">

@@ -20,6 +20,9 @@ builder.AddServiceDefaults();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+// Add SignalR for real-time authentication state updates
+builder.Services.AddSignalR();
+
 // Configure Blazor Server with detailed errors in development
 if (builder.Environment.IsDevelopment())
 {
@@ -65,6 +68,15 @@ builder.Services.AddSingleton<IJsonSerializationService, JsonSerializationServic
 
 // Toast notification service - Singleton so all components can share the same instance
 builder.Services.AddSingleton<IToastService, ToastService>();
+
+// Token information service for JWT token parsing
+builder.Services.AddScoped<ITokenInfoService, TokenInfoService>();
+
+// Rate limiting service for preventing rapid successive operations
+builder.Services.AddSingleton<IRateLimitingService, RateLimitingService>();
+
+// Authentication state notification service for SignalR broadcasting
+builder.Services.AddScoped<IAuthStateNotificationService, AuthStateNotificationService>();
 
 // Add HttpClient for the API - configured for both local debugging and Kubernetes deployment
 builder.Services.AddHttpClient<IAuthService, AuthService>("apiservice", client =>
@@ -248,6 +260,9 @@ app.MapGet("/logout", async (HttpContext context) =>
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+// Map SignalR hubs with authentication
+app.MapHub<AspireDeezNuts.Web.Hubs.AuthHub>("/authHub").RequireAuthorization();
 
 app.MapDefaultEndpoints();
 
