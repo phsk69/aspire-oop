@@ -8,6 +8,7 @@
 @inject IHttpClientFactory HttpClientFactory
 @inject ILogger<UserAdmin> Logger
 @inject IJsonSerializationService JsonSerialization
+@inject IToastService ToastService
 
 <PageTitle>User Administration</PageTitle>
 
@@ -99,13 +100,11 @@
 
 <Modal @ref="createUserModal" Title="Create New User" Size="ModalSize.Regular" UseStaticBackdrop="true" />
 
-<Toasts class="p-3" Messages="toastMessages" Placement="ToastsPlacement.TopRight" />
 
 @code {
     private List<UserDto>? users;
     private Modal createUserModal = default!;
     private CreateUserDto newUser = new();
-    private List<ToastMessage> toastMessages = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -127,13 +126,13 @@
             else
             {
                 Logger.LogWarning("Failed to load users. Status: {StatusCode}", response.StatusCode);
-                ShowToast($"Failed to load users: {response.ReasonPhrase}", ToastType.Danger);
+                ToastService.ShowError($"Failed to load users: {response.ReasonPhrase}");
             }
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error loading users");
-            ShowToast("Error loading users", ToastType.Danger);
+            ToastService.ShowError("Error loading users");
         }
     }
 
@@ -179,27 +178,27 @@
             var response = await httpClient.PostAsync("api/v1/user", content);
             if (response.IsSuccessStatusCode)
             {
-                ShowToast($"User {userToCreate.Email} created successfully", ToastType.Success);
+                ToastService.ShowSuccess($"User {userToCreate.Email} created successfully");
                 await LoadUsers();
             }
             else
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
                 Logger.LogWarning("Failed to create user. Status: {StatusCode}, Content: {Content}", response.StatusCode, errorContent);
-                ShowToast($"Failed to create user: {response.ReasonPhrase}", ToastType.Danger);
+                ToastService.ShowError($"Failed to create user: {response.ReasonPhrase}");
             }
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error creating user");
-            ShowToast("Error creating user", ToastType.Danger);
+            ToastService.ShowError("Error creating user");
         }
     }
 
     private Task EditUser(UserDto user)
     {
         // TODO: Implement edit user functionality
-        ShowToast($"Edit user {user.Email} - Not yet implemented", ToastType.Info);
+        ToastService.ShowInfo($"Edit user {user.Email} - Not yet implemented");
         return Task.CompletedTask;
     }
 
@@ -223,20 +222,20 @@
             if (response.IsSuccessStatusCode)
             {
                 var action = isAdmin ? "removed from" : "added to";
-                ShowToast($"User {user.Email} {action} Admin role", ToastType.Success);
+                ToastService.ShowSuccess($"User {user.Email} {action} Admin role");
                 await LoadUsers();
             }
             else
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
                 Logger.LogWarning("Failed to update user role. Status: {StatusCode}, Content: {Content}", response.StatusCode, errorContent);
-                ShowToast($"Failed to update user role: {response.ReasonPhrase}", ToastType.Danger);
+                ToastService.ShowError($"Failed to update user role: {response.ReasonPhrase}");
             }
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error updating user role");
-            ShowToast("Error updating user role", ToastType.Danger);
+            ToastService.ShowError("Error updating user role");
         }
     }
 
@@ -249,31 +248,21 @@
             var response = await httpClient.DeleteAsync($"api/v1/user/{user.Id}");
             if (response.IsSuccessStatusCode)
             {
-                ShowToast($"User {user.Email} deleted successfully", ToastType.Success);
+                ToastService.ShowSuccess($"User {user.Email} deleted successfully");
                 await LoadUsers();
             }
             else
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
                 Logger.LogWarning("Failed to delete user. Status: {StatusCode}, Content: {Content}", response.StatusCode, errorContent);
-                ShowToast($"Failed to delete user: {response.ReasonPhrase}", ToastType.Danger);
+                ToastService.ShowError($"Failed to delete user: {response.ReasonPhrase}");
             }
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error deleting user");
-            ShowToast("Error deleting user", ToastType.Danger);
+            ToastService.ShowError("Error deleting user");
         }
     }
 
-    private void ShowToast(string message, ToastType type)
-    {
-        toastMessages.Add(new ToastMessage
-        {
-            Type = type,
-            Title = type.ToString(),
-            Message = message,
-            AutoHide = true
-        });
-    }
 }

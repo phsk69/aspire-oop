@@ -9,14 +9,19 @@ public interface IAuthService
     Task LogoutAsync();
     Task<string?> GetTokenAsync();
     Task<string?> RefreshTokenAsync();
+    Task<LoginResponse?> GetLoginResponseAsync();
+    Task<string?> RefreshTokenAsync(string refreshToken);
+    Task<LoginResponse?> RefreshTokensAsync(string refreshToken);
 }
 
-public class AuthService(HttpClient httpClient, ILogger<AuthService> logger) : IAuthService
+public class AuthService(HttpClient httpClient, ILogger<AuthService> logger, IJsonSerializationService jsonService) : IAuthService
 {
     private readonly HttpClient _httpClient = httpClient;
     private readonly ILogger<AuthService> _logger = logger;
+    private readonly IJsonSerializationService _jsonService = jsonService;
     private string? _cachedToken;
     private string? _cachedRefreshToken;
+    private LoginResponse? _cachedLoginResponse;
 
     public async Task<LoginResult> LoginAsync(LoginRequest request)
     {
@@ -28,15 +33,13 @@ public class AuthService(HttpClient httpClient, ILogger<AuthService> logger) : I
             if (response.IsSuccessStatusCode)
             {
                 var content = await response.Content.ReadAsStringAsync();
-                var loginResponse = JsonSerializer.Deserialize<LoginResponse>(content, new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                });
+                var loginResponse = _jsonService.Deserialize<LoginResponse>(content);
 
                 if (loginResponse != null)
                 {
                     _cachedToken = loginResponse.AccessToken;
                     _cachedRefreshToken = loginResponse.RefreshToken;
+                    _cachedLoginResponse = loginResponse;
                     _logger.LogInformation("User logged in successfully");
                     return new LoginResult { Success = true };
                 }
@@ -76,6 +79,7 @@ public class AuthService(HttpClient httpClient, ILogger<AuthService> logger) : I
         {
             _cachedToken = null;
             _cachedRefreshToken = null;
+            _cachedLoginResponse = null;
             _logger.LogInformation("User logged out");
         }
     }
@@ -83,6 +87,11 @@ public class AuthService(HttpClient httpClient, ILogger<AuthService> logger) : I
     public async Task<string?> GetTokenAsync()
     {
         return await Task.FromResult(_cachedToken);
+    }
+
+    public async Task<LoginResponse?> GetLoginResponseAsync()
+    {
+        return await Task.FromResult(_cachedLoginResponse);
     }
 
     public async Task<string?> RefreshTokenAsync()
@@ -107,15 +116,13 @@ public class AuthService(HttpClient httpClient, ILogger<AuthService> logger) : I
             if (response.IsSuccessStatusCode)
             {
                 var content = await response.Content.ReadAsStringAsync();
-                var refreshResponse = JsonSerializer.Deserialize<LoginResponse>(content, new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                });
+                var refreshResponse = _jsonService.Deserialize<LoginResponse>(content);
 
                 if (refreshResponse != null && !string.IsNullOrEmpty(refreshResponse.AccessToken))
                 {
                     _cachedToken = refreshResponse.AccessToken;
                     _cachedRefreshToken = refreshResponse.RefreshToken; // Update refresh token too
+                    _cachedLoginResponse = refreshResponse;
                     _logger.LogInformation("Token refreshed successfully");
                     return refreshResponse.AccessToken;
                 }
@@ -126,6 +133,7 @@ public class AuthService(HttpClient httpClient, ILogger<AuthService> logger) : I
                 // Clear tokens if refresh fails (likely expired)
                 _cachedToken = null;
                 _cachedRefreshToken = null;
+                _cachedLoginResponse = null;
             }
 
             return null;
@@ -133,6 +141,82 @@ public class AuthService(HttpClient httpClient, ILogger<AuthService> logger) : I
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error refreshing token");
+            return null;
+        }
+    }
+
+    public async Task<string?> RefreshTokenAsync(string refreshToken)
+    {
+        try
+        {
+            _logger.LogInformation("Attempting to refresh JWT token using provided refresh token");
+            
+            var refreshRequest = new RefreshTokenRequest
+            {
+                RefreshToken = refreshToken
+            };
+
+            var response = await _httpClient.PostAsJsonAsync("api/v1/auth/refresh", refreshRequest);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                var refreshResponse = _jsonService.Deserialize<LoginResponse>(content);
+
+                if (refreshResponse != null && !string.IsNullOrEmpty(refreshResponse.AccessToken))
+                {
+                    _logger.LogInformation("Token refreshed successfully with provided refresh token");
+                    return refreshResponse.AccessToken;
+                }
+            }
+            else
+            {
+                _logger.LogWarning("Token refresh failed with status: {StatusCode}", response.StatusCode);
+            }
+
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error refreshing token with provided refresh token");
+            return null;
+        }
+    }
+
+    public async Task<LoginResponse?> RefreshTokensAsync(string refreshToken)
+    {
+        try
+        {
+            _logger.LogInformation("Attempting to refresh both access and refresh tokens using provided refresh token");
+            
+            var refreshRequest = new RefreshTokenRequest
+            {
+                RefreshToken = refreshToken
+            };
+
+            var response = await _httpClient.PostAsJsonAsync("api/v1/auth/refresh", refreshRequest);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                var refreshResponse = _jsonService.Deserialize<LoginResponse>(content);
+
+                if (refreshResponse != null && !string.IsNullOrEmpty(refreshResponse.AccessToken))
+                {
+                    _logger.LogInformation("Both access and refresh tokens refreshed successfully");
+                    return refreshResponse;
+                }
+            }
+            else
+            {
+                _logger.LogWarning("Token refresh failed with status: {StatusCode}", response.StatusCode);
+            }
+
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error refreshing tokens with provided refresh token");
             return null;
         }
     }

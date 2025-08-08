@@ -18,6 +18,7 @@ data:
   DEPLOYMENT_ENVIRONMENT: "Kubernetes"
   API_BASE_URL: "https://aspire-deez-nuts-api:8443"
   DOTNET_SYSTEM_NET_HTTP_USESOCKETSHTTPHANDLER: "false"
+  Authentication__TokenRefreshIntervalMinutes: "5"
   services__aspire-deez-nuts-api__http__0: "http://aspire-deez-nuts-api:8080"
   services__aspire-deez-nuts-api__https__0: "https://aspire-deez-nuts-api:8443"
   services__aspire-deez-nuts-web__http__0: "http://aspire-deez-nuts-web:8080"

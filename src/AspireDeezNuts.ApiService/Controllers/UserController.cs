@@ -134,7 +134,7 @@ public class UserController(
             var roleResult = await _userManager.AddToRoleAsync(newUser, role);
             if (!roleResult.Succeeded)
             {
-                _logger.LogWarning("Failed to add user {UserId} to role {Role}", newUser.Id, role);
+                _logger.LogWarning("User: {UserId} - Failed to add user {NewUserId} to role {Role}", adminUser?.Id ?? "Unknown", newUser.Id, role);
             }
 
             var roles = await _userManager.GetRolesAsync(newUser);

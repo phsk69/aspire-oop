@@ -15,4 +15,5 @@ public class TokenResponse
     public required string RefreshToken { get; set; }
     public DateTime AccessTokenExpiry { get; set; }
     public DateTime RefreshTokenExpiry { get; set; }
+    public string? UserId { get; set; }
 }

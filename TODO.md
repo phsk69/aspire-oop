@@ -2,8 +2,9 @@
 
 ## Immediate
 
+- [ ] Are we storing the new refresh token, after we get a new access toking using the old in the user cookie?
+- [ ] Implement proper logging for refreshing in the backend, nothing was logged when the refresh flow as successful in the api
 - [ ] Demonstrate the token refresh logic/flow works - perhaps on a separate "user profile'ish" page
-- [ ] Kubernetes deployment 404 on something
 
 ## Design Patterns Implementation (GoF Book)
 
@@ -61,24 +62,28 @@
   - Macro recording and playback for complex operations
 
 #### Decorator Pattern - Dynamic UI Enhancement
+
 - [ ] Create post cards that can be dynamically decorated
   - Add borders, badges, effects, themes at runtime
   - Visual layering animation showing decoration application
   - Combine multiple decorators with stacking animation
 
 #### Chain of Responsibility - Request Processing Pipeline
+
 - [ ] Visualize post validation/processing pipeline
   - Animated request flowing through validation handlers
   - Visual feedback for each step (success/failure states)
   - Handler chain modification with drag-and-drop
 
 #### Strategy Pattern - Algorithm Visualization
+
 - [ ] Implement multiple post sorting/filtering strategies with animations
   - Visual comparison of different sorting algorithms
   - Strategy switching with smooth transitions
   - Performance metrics display for each strategy
 
 #### Builder Pattern - Complex Object Construction
+
 - [ ] Create visual post builder with step-by-step assembly
   - Animated component addition to build complex posts
   - Progress indicators for each construction step
@@ -126,6 +131,7 @@
   - Test form validation and submission flows
 
 ### Functional Integration Testing
+
 - [ ] End-to-end API testing without external dependencies
   - Use TestServer to test complete request/response cycles
   - Test configuration-based behavior switching

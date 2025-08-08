@@ -21,13 +21,8 @@ RUN dotnet restore "src/AspireDeezNuts.Web/AspireDeezNuts.Web.csproj"
 # Copy everything else
 COPY . .
 
-# Build
+# Publish (includes build)
 WORKDIR "/src/src/AspireDeezNuts.Web"
-RUN dotnet build "AspireDeezNuts.Web.csproj" -c $BUILD_CONFIGURATION -o /app/build
-
-# Publish
-FROM build AS publish
-ARG BUILD_CONFIGURATION=Release
 RUN dotnet publish "AspireDeezNuts.Web.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 # Final stage
@@ -39,7 +34,7 @@ RUN apt-get update && \
     apt-get install -y ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
-COPY --from=publish /app/publish .
+COPY --from=build /app/publish .
 
 # Script to trust cert-manager CA at runtime
 RUN echo '#!/bin/bash\n\

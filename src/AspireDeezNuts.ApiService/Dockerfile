@@ -21,13 +21,8 @@ RUN dotnet restore "src/AspireDeezNuts.ApiService/AspireDeezNuts.ApiService.cspr
 # Copy everything else
 COPY . .
 
-# Build
+# Publish (includes build)
 WORKDIR "/src/src/AspireDeezNuts.ApiService"
-RUN dotnet build "AspireDeezNuts.ApiService.csproj" -c $BUILD_CONFIGURATION -o /app/build
-
-# Publish
-FROM build AS publish
-ARG BUILD_CONFIGURATION=Release
 RUN dotnet publish "AspireDeezNuts.ApiService.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 # Final stage
@@ -39,7 +34,7 @@ RUN apt-get update && \
     apt-get install -y ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
-COPY --from=publish /app/publish .
+COPY --from=build /app/publish .
 
 # Script to trust cert-manager CA at runtime
 RUN echo '#!/bin/bash\n\

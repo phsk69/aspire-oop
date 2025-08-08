@@ -93,6 +93,9 @@ public class PostsController(
     {
         if (string.IsNullOrWhiteSpace(title))
         {
+            var userEmail = User.Identity?.Name;
+            var user = await _userManager.FindByEmailAsync(userEmail ?? "");
+            _logger.LogWarning("User: {UserId} - Search posts attempted with empty title parameter", user?.Id ?? "Unknown");
             return BadRequest("Title search parameter is required");
         }
 

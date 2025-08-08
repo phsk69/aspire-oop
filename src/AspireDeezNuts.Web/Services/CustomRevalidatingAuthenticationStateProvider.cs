@@ -1,25 +1,21 @@
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server;
+using Microsoft.Extensions.Options;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using AspireDeezNuts.Shared.Models;
 
 namespace AspireDeezNuts.Web.Services;
 
-public class CustomRevalidatingAuthenticationStateProvider : RevalidatingServerAuthenticationStateProvider
+public class CustomRevalidatingAuthenticationStateProvider(
+    ILoggerFactory loggerFactory,
+    IServiceScopeFactory scopeFactory,
+    IOptions<AuthenticationOptions> authOptions) : RevalidatingServerAuthenticationStateProvider(loggerFactory)
 {
-    private readonly IServiceScopeFactory _scopeFactory;
-    private readonly ILogger<CustomRevalidatingAuthenticationStateProvider> _logger;
+    private readonly ILogger<CustomRevalidatingAuthenticationStateProvider> _logger = loggerFactory.CreateLogger<CustomRevalidatingAuthenticationStateProvider>();
+    private readonly AuthenticationOptions _authOptions = authOptions.Value;
 
-    public CustomRevalidatingAuthenticationStateProvider(
-        ILoggerFactory loggerFactory,
-        IServiceScopeFactory scopeFactory)
-        : base(loggerFactory)
-    {
-        _scopeFactory = scopeFactory;
-        _logger = loggerFactory.CreateLogger<CustomRevalidatingAuthenticationStateProvider>();
-    }
-
-    protected override TimeSpan RevalidationInterval => TimeSpan.FromMinutes(5); // Check every 5 minutes
+    protected override TimeSpan RevalidationInterval => TimeSpan.FromMinutes(_authOptions.TokenRefreshIntervalMinutes);
 
     protected override async Task<bool> ValidateAuthenticationStateAsync(
         AuthenticationState authenticationState, CancellationToken cancellationToken)
@@ -49,18 +45,26 @@ public class CustomRevalidatingAuthenticationStateProvider : RevalidatingServerA
             {
                 _logger.LogInformation("Token needs refresh, attempting to refresh");
                 
-                using var scope = _scopeFactory.CreateScope();
+                // Get refresh token from claims
+                var refreshTokenClaim = authenticationState.User.Claims.FirstOrDefault(c => c.Type == "refresh_token");
+                if (refreshTokenClaim == null)
+                {
+                    _logger.LogWarning("No refresh_token claim found, cannot refresh");
+                    return false;
+                }
+                
+                using var scope = scopeFactory.CreateScope();
                 var authService = scope.ServiceProvider.GetRequiredService<IAuthService>();
                 
-                // Try to refresh the token
-                var newToken = await authService.RefreshTokenAsync();
+                // Try to refresh both tokens using the refresh token from claims
+                var newTokens = await authService.RefreshTokensAsync(refreshTokenClaim.Value);
                 
-                if (!string.IsNullOrEmpty(newToken))
+                if (newTokens != null && !string.IsNullOrEmpty(newTokens.AccessToken))
                 {
-                    _logger.LogInformation("Token refreshed successfully");
+                    _logger.LogInformation("Tokens refreshed successfully");
                     
-                    // Update the authentication state with new token
-                    await UpdateAuthenticationStateWithNewToken(newToken, authenticationState.User);
+                    // Update the authentication state with both new tokens
+                    await UpdateAuthenticationStateWithNewTokens(newTokens, authenticationState.User);
                     return true;
                 }
                 else
@@ -93,6 +97,7 @@ public class CustomRevalidatingAuthenticationStateProvider : RevalidatingServerA
             // Preserve essential claims from current user
             var existingNameClaim = currentUser.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Name);
             var existingEmailClaim = currentUser.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email);
+            var existingRefreshTokenClaim = currentUser.Claims.FirstOrDefault(c => c.Type == "refresh_token");
             
             if (existingNameClaim != null && !claims.Any(c => c.Type == ClaimTypes.Name))
             {
@@ -101,6 +106,10 @@ public class CustomRevalidatingAuthenticationStateProvider : RevalidatingServerA
             if (existingEmailClaim != null && !claims.Any(c => c.Type == ClaimTypes.Email))
             {
                 claims.Add(existingEmailClaim);
+            }
+            if (existingRefreshTokenClaim != null && !claims.Any(c => c.Type == "refresh_token"))
+            {
+                claims.Add(existingRefreshTokenClaim);
             }
 
             var identity = new ClaimsIdentity(claims, currentUser.Identity!.AuthenticationType);
@@ -117,6 +126,53 @@ public class CustomRevalidatingAuthenticationStateProvider : RevalidatingServerA
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating authentication state with new token");
+        }
+    }
+
+    private async Task UpdateAuthenticationStateWithNewTokens(LoginResponse newTokens, ClaimsPrincipal currentUser)
+    {
+        try
+        {
+            var handler = new JwtSecurityTokenHandler();
+            var jwtToken = handler.ReadJwtToken(newTokens.AccessToken);
+            
+            // Create new claims list with updated tokens
+            var claims = jwtToken.Claims.ToList();
+            claims.Add(new Claim("access_token", newTokens.AccessToken));
+            
+            // Add the new refresh token
+            if (!string.IsNullOrEmpty(newTokens.RefreshToken))
+            {
+                claims.Add(new Claim("refresh_token", newTokens.RefreshToken));
+            }
+            
+            // Preserve essential claims from current user
+            var existingNameClaim = currentUser.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Name);
+            var existingEmailClaim = currentUser.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email);
+            
+            if (existingNameClaim != null && !claims.Any(c => c.Type == ClaimTypes.Name))
+            {
+                claims.Add(existingNameClaim);
+            }
+            if (existingEmailClaim != null && !claims.Any(c => c.Type == ClaimTypes.Email))
+            {
+                claims.Add(existingEmailClaim);
+            }
+
+            var identity = new ClaimsIdentity(claims, currentUser.Identity!.AuthenticationType);
+            var newPrincipal = new ClaimsPrincipal(identity);
+            
+            // Notify that authentication state changed
+            NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(newPrincipal)));
+            
+            _logger.LogInformation("Authentication state updated with new access and refresh tokens");
+            
+            // Small delay to ensure state propagation
+            await Task.Delay(1);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating authentication state with new tokens");
         }
     }
 }

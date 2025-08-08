@@ -1,5 +1,7 @@
 @page "/login"
 @attribute [AllowAnonymous]
+@inject NavigationManager Navigation
+@inject IToastService ToastService
 
 <PageTitle>Login</PageTitle>
 
@@ -40,3 +42,18 @@
         </div>
     </div>
 </div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        // Check for error query parameter
+        var uri = new Uri(Navigation.Uri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        var error = query["error"];
+        
+        if (!string.IsNullOrEmpty(error))
+        {
+            ToastService.ShowError(error, "Login Failed");
+        }
+    }
+}

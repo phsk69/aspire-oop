@@ -7,7 +7,6 @@ using System.Security.Claims;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Components.Server;
 using System.IdentityModel.Tokens.Jwt;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Components.Authorization;
 using System.Globalization;
 using Microsoft.AspNetCore.Localization;
@@ -16,13 +15,6 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add service defaults & Aspire client integrations.
 builder.AddServiceDefaults();
-
-// Add data protection for cookie sharing
-var sharedKeysPath = Path.Combine(Path.GetTempPath(), "AspireDeezNuts-DataProtection-Keys");
-Directory.CreateDirectory(sharedKeysPath);
-builder.Services.AddDataProtection()
-    .PersistKeysToFileSystem(new DirectoryInfo(sharedKeysPath))
-    .SetApplicationName("AspireDeezNuts");
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
@@ -56,6 +48,13 @@ builder.Services.AddAuthorizationCore();
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddHttpContextAccessor();
 
+// Configure token refresh interval from settings
+builder.Services.Configure<AspireDeezNuts.Web.Services.AuthenticationOptions>(options =>
+{
+    var intervalMinutes = builder.Configuration.GetValue("Authentication:TokenRefreshIntervalMinutes", 1);
+    options.TokenRefreshIntervalMinutes = intervalMinutes;
+});
+
 // Replace default authentication state provider with custom revalidating one
 builder.Services.AddScoped<AuthenticationStateProvider, CustomRevalidatingAuthenticationStateProvider>();
 
@@ -63,6 +62,9 @@ builder.Services.AddScoped<AuthenticationStateProvider, CustomRevalidatingAuthen
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<AuthorizedHttpMessageHandler>();
 builder.Services.AddSingleton<IJsonSerializationService, JsonSerializationService>();
+
+// Toast notification service - Singleton so all components can share the same instance
+builder.Services.AddSingleton<IToastService, ToastService>();
 
 // Add HttpClient for the API - configured for both local debugging and Kubernetes deployment
 builder.Services.AddHttpClient<IAuthService, AuthService>("apiservice", client =>
@@ -179,20 +181,24 @@ app.MapPost("/api/login", async (HttpContext context, IAuthService authService) 
 
     if (result.Success)
     {
-        // Get the JWT token from the auth service
-        var token = await authService.GetTokenAsync();
+        // Get both tokens from the auth service
+        var loginResponse = await authService.GetLoginResponseAsync();
         
-        if (!string.IsNullOrEmpty(token))
+        if (loginResponse != null && !string.IsNullOrEmpty(loginResponse.AccessToken))
         {
             // Parse claims from JWT token
             var handler = new JwtSecurityTokenHandler();
-            var jwtToken = handler.ReadJwtToken(token);
+            var jwtToken = handler.ReadJwtToken(loginResponse.AccessToken);
             
             // Extract all claims from the JWT token
             var claims = jwtToken.Claims.ToList();
             
-            // Add the JWT token as a claim for API calls
-            claims.Add(new Claim("access_token", token));
+            // Add both tokens as claims for API calls and refresh
+            claims.Add(new Claim("access_token", loginResponse.AccessToken));
+            if (!string.IsNullOrEmpty(loginResponse.RefreshToken))
+            {
+                claims.Add(new Claim("refresh_token", loginResponse.RefreshToken));
+            }
             
             // Ensure we have essential claims
             if (!claims.Any(c => c.Type == ClaimTypes.Name))

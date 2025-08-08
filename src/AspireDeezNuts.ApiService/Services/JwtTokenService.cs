@@ -31,7 +31,8 @@ public class JwtTokenService(
             AccessToken = Token,
             RefreshToken = refreshToken.Token,
             AccessTokenExpiry = Expiry,
-            RefreshTokenExpiry = refreshToken.Expiry
+            RefreshTokenExpiry = refreshToken.Expiry,
+            UserId = user.Id
         };
     }
 

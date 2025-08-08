@@ -70,6 +70,7 @@ public class AuthController(
             return Unauthorized(new { message = "Invalid refresh token" });
         }
 
+        _logger.LogInformation("User: {UserId} - Successfully refreshed tokens", tokens.UserId ?? "Unknown");
         return Ok(new LoginResponse
         {
             AccessToken = tokens.AccessToken,
@@ -170,8 +171,12 @@ public class AuthController(
 
     [HttpGet("test")]
     [Authorize]
-    public IActionResult TestAuth()
+    public async Task<IActionResult> TestAuth()
     {
+        var userEmail = User.Identity?.Name;
+        var user = await _userManager.FindByEmailAsync(userEmail ?? "");
+        _logger.LogInformation("User: {UserId} - Test authentication endpoint accessed", user?.Id ?? "Unknown");
+        
         return Ok(new
         {
             message = "You are authenticated!",
@@ -182,8 +187,12 @@ public class AuthController(
 
     [HttpGet("test-admin")]
     [Authorize(Policy = "AdminOnly")]
-    public IActionResult TestAdminAuth()
+    public async Task<IActionResult> TestAdminAuth()
     {
+        var adminEmail = User.Identity?.Name;
+        var adminUser = await _userManager.FindByEmailAsync(adminEmail ?? "");
+        _logger.LogInformation("User: {UserId} - Test admin authentication endpoint accessed", adminUser?.Id ?? "Unknown");
+        
         return Ok(new { message = "You are an admin!" });
     }
 }
