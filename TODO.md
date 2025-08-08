@@ -2,9 +2,7 @@
 
 ## Immediate
 
-- [ ] Demonstrate the token refresh logic/flow works - perhaps on a separate "user profile'ish" page
 - [ ] Migrate nav to the classical left nav stuff instead
-- [ ] More rate limiting on the refreshbutton to give time to make the notification of update to properly propergate
 
 ## Design Patterns Implementation (GoF Book)
 

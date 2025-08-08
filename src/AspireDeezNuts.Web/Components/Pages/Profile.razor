@@ -6,6 +6,7 @@
 @using AspireDeezNuts.Web.Services
 @using AspireDeezNuts.Shared.Models
 @using Microsoft.AspNetCore.SignalR.Client
+@using System.Net
 @using BlazorBootstrap
 @attribute [Authorize]
 @inject AuthenticationStateProvider AuthenticationStateProvider
@@ -16,6 +17,7 @@
 @inject IHttpClientFactory HttpClientFactory
 @inject NavigationManager Navigation
 @inject IRateLimitingService RateLimitingService
+@inject IHttpContextAccessor HttpContextAccessor
 @implements IAsyncDisposable
 @rendermode InteractiveServer
 
@@ -137,11 +139,11 @@
                             </div>
                             <div class="col-6">
                                 <small class="text-muted">Issued</small>
-                                <div class="fw-semibold">@tokenInfo.IssuedAt.ToString("HH:mm:ss")</div>
+                                <div class="fw-semibold">@tokenInfo.IssuedAt.ToString("HH:mm:ss") UTC</div>
                             </div>
                             <div class="col-6">
                                 <small class="text-muted">Expires</small>
-                                <div class="fw-semibold">@tokenInfo.ExpiresAt.ToString("HH:mm:ss")</div>
+                                <div class="fw-semibold">@tokenInfo.ExpiresAt.ToString("HH:mm:ss") UTC</div>
                             </div>
                         </div>
                     }
@@ -211,7 +213,7 @@
                                     <div class="border rounded p-3 bg-light">
                                         <Icon Name="IconName.CheckCircle" Size="IconSize.x2" class="text-success mb-2" />
                                         <div class="small text-muted mb-1">Last Refresh</div>
-                                        <div class="fw-bold">@lastRefreshTime.Value.ToString("HH:mm:ss")</div>
+                                        <div class="fw-bold">@lastRefreshTime.Value.ToString("HH:mm:ss") UTC</div>
                                     </div>
                                 }
                                 else
@@ -330,6 +332,7 @@
     private Modal tokenDetailsModal = default!;
     private Timer? tokenUpdateTimer;
     private HubConnection? hubConnection;
+    private DateTime? lastManualRefreshTime;
 
     protected override async Task OnInitializedAsync()
     {
@@ -401,6 +404,7 @@
         var executed = await RateLimitingService.TryExecuteAsync(operationKey, async () =>
         {
             isRefreshing = true;
+            lastManualRefreshTime = DateTime.UtcNow; // Record when manual refresh started
             StateHasChanged(); // Force UI update immediately
             
             try
@@ -417,12 +421,13 @@
                 
                 if (!string.IsNullOrEmpty(refreshResult))
                 {
-                    lastRefreshTime = DateTime.Now;
+                    lastRefreshTime = DateTime.UtcNow;
                     
                     // Force re-read of authentication state
                     await RefreshTokenInfo();
                     
-                    ToastService.ShowSuccess($"Token refreshed! New expiry: {tokenInfo?.ExpiresAt.ToString("HH:mm:ss")}");
+                    // Always show manual refresh success toast since this is in the manual refresh method
+                    ToastService.ShowSuccess($"Token refreshed! New expiry: {tokenInfo?.ExpiresAt.ToString("HH:mm:ss")} UTC");
                     
                     Logger.LogInformation("Profile token refresh completed. Old: {OldExpiry}, New: {NewExpiry}", 
                         oldTokenInfo?.ExpiresAt.ToString("HH:mm:ss"), tokenInfo?.ExpiresAt.ToString("HH:mm:ss"));
@@ -529,10 +534,43 @@
     {
         try
         {
-            // In Blazor Server, authentication is handled via cookies
+            // Get the current authentication state to ensure user is authenticated
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            if (!authState.User?.Identity?.IsAuthenticated ?? true)
+            {
+                Logger.LogWarning("User not authenticated, skipping SignalR connection initialization");
+                return;
+            }
+            
+            
+            // Configure SignalR with manual cookie passing (required for Blazor Server)
+            var cookieContainer = new CookieContainer();
+            
+            // Get authentication cookie from current HTTP context
+            var httpContext = HttpContextAccessor.HttpContext;
+            if (httpContext?.Request.Cookies != null)
+            {
+                foreach (var cookie in httpContext.Request.Cookies)
+                {
+                    if (cookie.Key.StartsWith(".AspNetCore") || cookie.Key.Contains("Auth"))
+                    {
+                        Logger.LogInformation("Adding cookie to SignalR connection: {CookieName}", cookie.Key);
+                        cookieContainer.Add(new Cookie(cookie.Key, cookie.Value, "/", 
+                            httpContext.Request.Host.Host));
+                    }
+                }
+            }
+            
             hubConnection = new HubConnectionBuilder()
-                .WithUrl(Navigation.ToAbsoluteUri("/authHub"))
+                .WithUrl(Navigation.ToAbsoluteUri("/authHub"), options =>
+                {
+                    options.Cookies = cookieContainer;
+                })
                 .WithAutomaticReconnect()
+                .ConfigureLogging(logging =>
+                {
+                    logging.SetMinimumLevel(LogLevel.Information);
+                })
                 .Build();
 
             // Subscribe to token refresh events
@@ -547,8 +585,14 @@
                         // Refresh token info from authentication state
                         await RefreshTokenInfo();
                         
-                        // Show toast notification about automatic refresh
-                        ToastService.ShowInfo("Token automatically refreshed by system");
+                        // Only show automatic refresh toast if this was NOT a recent manual refresh
+                        var timeSinceManualRefresh = lastManualRefreshTime.HasValue ? 
+                            DateTime.UtcNow - lastManualRefreshTime.Value : TimeSpan.MaxValue;
+                        
+                        if (timeSinceManualRefresh > TimeSpan.FromSeconds(5))
+                        {
+                            ToastService.ShowInfo("Token automatically refreshed by system");
+                        }
                         Logger.LogInformation("UI updated after receiving SignalR token refresh notification");
                         
                         StateHasChanged();

@@ -1,6 +1,7 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @inherits LayoutComponentBase
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@implements IDisposable
 
 <div class="page">
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
@@ -67,3 +68,23 @@
 </div>
 
 <AspireDeezNuts.Web.Components.Shared.ToastContainer />
+
+@code {
+    protected override void OnInitialized()
+    {
+        // Subscribe to authentication state changes to refresh the layout
+        AuthenticationStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+    }
+
+    private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
+    {
+        // Force the layout to re-render when authentication state changes
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        // Unsubscribe from authentication state changes to prevent memory leaks
+        AuthenticationStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+    }
+}

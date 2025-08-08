@@ -28,9 +28,6 @@ public class AuthService(HttpClient httpClient, ILogger<AuthService> logger, IJs
     private readonly IAuthStateNotificationService _authStateNotificationService = authStateNotificationService;
     private readonly ITokenInfoService _tokenInfoService = tokenInfoService;
     private readonly AuthenticationStateProvider _authStateProvider = authStateProvider;
-    private string? _cachedToken;
-    private string? _cachedRefreshToken;
-    private LoginResponse? _cachedLoginResponse;
 
     public async Task<LoginResult> LoginAsync(LoginRequest request)
     {
@@ -46,9 +43,14 @@ public class AuthService(HttpClient httpClient, ILogger<AuthService> logger, IJs
 
                 if (loginResponse != null)
                 {
-                    _cachedToken = loginResponse.AccessToken;
-                    _cachedRefreshToken = loginResponse.RefreshToken;
-                    _cachedLoginResponse = loginResponse;
+                    // Store tokens in HTTP context for request-scoped caching
+                    var httpContext = _httpContextAccessor.HttpContext;
+                    if (httpContext != null)
+                    {
+                        httpContext.Items["CachedAccessToken"] = loginResponse.AccessToken;
+                        httpContext.Items["CachedRefreshToken"] = loginResponse.RefreshToken;
+                        httpContext.Items["CachedLoginResponse"] = loginResponse;
+                    }
                     _logger.LogInformation("User logged in successfully");
                     return new LoginResult { Success = true };
                 }
@@ -71,12 +73,26 @@ public class AuthService(HttpClient httpClient, ILogger<AuthService> logger, IJs
     {
         try
         {
+            // Get cached refresh token from request scope
+            var httpContext = _httpContextAccessor.HttpContext;
+            string? cachedRefreshToken = null;
+            if (httpContext != null)
+            {
+                cachedRefreshToken = httpContext.Items["CachedRefreshToken"] as string;
+            }
+            
+            // If no cached token, get from user claims
+            if (string.IsNullOrEmpty(cachedRefreshToken) && httpContext?.User?.Identity?.IsAuthenticated == true)
+            {
+                cachedRefreshToken = httpContext.User.FindFirst("refresh_token")?.Value;
+            }
+
             // Attempt to revoke the refresh token on the server
-            if (!string.IsNullOrEmpty(_cachedRefreshToken))
+            if (!string.IsNullOrEmpty(cachedRefreshToken))
             {
                 await _httpClient.PostAsJsonAsync("api/v1/auth/logout", new LogoutRequest 
                 { 
-                    RefreshToken = _cachedRefreshToken 
+                    RefreshToken = cachedRefreshToken 
                 });
             }
         }
@@ -86,29 +102,38 @@ public class AuthService(HttpClient httpClient, ILogger<AuthService> logger, IJs
         }
         finally
         {
-            _cachedToken = null;
-            _cachedRefreshToken = null;
-            _cachedLoginResponse = null;
+            // Clear request-scoped cache
+            var httpContext = _httpContextAccessor.HttpContext;
+            if (httpContext != null)
+            {
+                httpContext.Items.Remove("CachedAccessToken");
+                httpContext.Items.Remove("CachedRefreshToken");
+                httpContext.Items.Remove("CachedLoginResponse");
+            }
             _logger.LogInformation("User logged out");
         }
     }
 
     public async Task<string?> GetTokenAsync()
     {
-        // If we have a cached token from a recent refresh, use that
-        if (!string.IsNullOrEmpty(_cachedToken))
-        {
-            return await Task.FromResult(_cachedToken);
-        }
-        
-        // Otherwise, get from current user claims in cookie
         var httpContext = _httpContextAccessor.HttpContext;
-        if (httpContext?.User?.Identity?.IsAuthenticated == true)
+        if (httpContext != null)
         {
-            var accessTokenClaim = httpContext.User.FindFirst("access_token");
-            if (accessTokenClaim != null)
+            // First check request-scoped cache
+            var cachedToken = httpContext.Items["CachedAccessToken"] as string;
+            if (!string.IsNullOrEmpty(cachedToken))
             {
-                return await Task.FromResult(accessTokenClaim.Value);
+                return await Task.FromResult(cachedToken);
+            }
+            
+            // Otherwise, get from current user claims in cookie
+            if (httpContext.User?.Identity?.IsAuthenticated == true)
+            {
+                var accessTokenClaim = httpContext.User.FindFirst("access_token");
+                if (accessTokenClaim != null)
+                {
+                    return await Task.FromResult(accessTokenClaim.Value);
+                }
             }
         }
         
@@ -117,7 +142,16 @@ public class AuthService(HttpClient httpClient, ILogger<AuthService> logger, IJs
 
     public async Task<LoginResponse?> GetLoginResponseAsync()
     {
-        return await Task.FromResult(_cachedLoginResponse);
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext != null)
+        {
+            var cachedResponse = httpContext.Items["CachedLoginResponse"] as LoginResponse;
+            if (cachedResponse != null)
+            {
+                return await Task.FromResult(cachedResponse);
+            }
+        }
+        return await Task.FromResult<LoginResponse?>(null);
     }
 
     public async Task<string?> RefreshTokenAsync()
@@ -151,20 +185,25 @@ public class AuthService(HttpClient httpClient, ILogger<AuthService> logger, IJs
 
                 if (refreshResponse != null && !string.IsNullOrEmpty(refreshResponse.AccessToken))
                 {
-                    _cachedToken = refreshResponse.AccessToken;
-                    _cachedRefreshToken = refreshResponse.RefreshToken; // Update refresh token too
-                    _cachedLoginResponse = refreshResponse;
+                    // Store refreshed tokens in request-scoped cache
+                    var httpContext = _httpContextAccessor.HttpContext;
+                    if (httpContext != null)
+                    {
+                        httpContext.Items["CachedAccessToken"] = refreshResponse.AccessToken;
+                        httpContext.Items["CachedRefreshToken"] = refreshResponse.RefreshToken;
+                        httpContext.Items["CachedLoginResponse"] = refreshResponse;
+                    }
                     
-                    // Update the authentication cookie for manual refreshes
-                    await UpdateCookieAuthenticationAsync(refreshResponse);
-                    
-                    // Force update the authentication state with new tokens
+                    // Force update the authentication state with new tokens first
                     var currentUser = _httpContextAccessor.HttpContext?.User;
                     if (currentUser != null && _authStateProvider is CustomRevalidatingAuthenticationStateProvider customProvider)
                     {
                         await customProvider.UpdateAuthenticationStateWithNewTokens(refreshResponse, currentUser);
                         _logger.LogInformation("Authentication state provider updated with new tokens");
                     }
+                    
+                    // Try to update the authentication cookie for manual refreshes (if possible)
+                    await UpdateCookieAuthenticationAsync(refreshResponse);
                     
                     // Notify connected clients about the token refresh via SignalR
                     await NotifyTokenRefreshViaSignalR(refreshResponse);
@@ -176,10 +215,14 @@ public class AuthService(HttpClient httpClient, ILogger<AuthService> logger, IJs
             else
             {
                 _logger.LogWarning("Token refresh failed with status: {StatusCode}", response.StatusCode);
-                // Clear tokens if refresh fails (likely expired)
-                _cachedToken = null;
-                _cachedRefreshToken = null;
-                _cachedLoginResponse = null;
+                // Clear request-scoped cache if refresh fails (likely expired)
+                var httpContext = _httpContextAccessor.HttpContext;
+                if (httpContext != null)
+                {
+                    httpContext.Items.Remove("CachedAccessToken");
+                    httpContext.Items.Remove("CachedRefreshToken");
+                    httpContext.Items.Remove("CachedLoginResponse");
+                }
             }
 
             return null;
@@ -270,32 +313,40 @@ public class AuthService(HttpClient httpClient, ILogger<AuthService> logger, IJs
 
     private string? GetCurrentRefreshToken()
     {
-        // If we have a cached refresh token from a recent refresh, use that
-        if (!string.IsNullOrEmpty(_cachedRefreshToken))
-        {
-            _logger.LogInformation("Using cached refresh token from recent refresh");
-            return _cachedRefreshToken;
-        }
-        
-        // Otherwise, get from current user claims in cookie
         var httpContext = _httpContextAccessor.HttpContext;
-        if (httpContext?.User?.Identity?.IsAuthenticated == true)
+        if (httpContext != null)
         {
-            var refreshTokenClaim = httpContext.User.FindFirst("refresh_token");
-            if (refreshTokenClaim != null)
+            // First check request-scoped cache for refreshed token
+            var cachedRefreshToken = httpContext.Items["CachedRefreshToken"] as string;
+            if (!string.IsNullOrEmpty(cachedRefreshToken))
             {
-                _logger.LogInformation("Found refresh_token claim in current user");
-                return refreshTokenClaim.Value;
+                _logger.LogInformation("Using cached refresh token from recent refresh");
+                return cachedRefreshToken;
+            }
+            
+            // Otherwise, get from current user claims in cookie
+            if (httpContext.User?.Identity?.IsAuthenticated == true)
+            {
+                var refreshTokenClaim = httpContext.User.FindFirst("refresh_token");
+                if (refreshTokenClaim != null)
+                {
+                    _logger.LogInformation("Found refresh_token claim in current user");
+                    return refreshTokenClaim.Value;
+                }
+                else
+                {
+                    _logger.LogWarning("No refresh_token claim found in current user. Available claims: {Claims}", 
+                        string.Join(", ", httpContext.User.Claims.Select(c => c.Type)));
+                }
             }
             else
             {
-                _logger.LogWarning("No refresh_token claim found in current user. Available claims: {Claims}", 
-                    string.Join(", ", httpContext.User.Claims.Select(c => c.Type)));
+                _logger.LogWarning("User is not authenticated");
             }
         }
         else
         {
-            _logger.LogWarning("User is not authenticated or HttpContext is null");
+            _logger.LogWarning("HttpContext is null");
         }
         
         return null;
@@ -315,7 +366,7 @@ public class AuthService(HttpClient httpClient, ILogger<AuthService> logger, IJs
             // Check if response has already started - can't update cookies if it has
             if (httpContext.Response.HasStarted)
             {
-                _logger.LogWarning("Cannot update authentication cookie - response has already started. Manual refresh succeeded but cookie not updated until next request.");
+                _logger.LogDebug("Response already started, deferring cookie update to next request");
                 return;
             }
 

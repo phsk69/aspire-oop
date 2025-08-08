@@ -166,8 +166,6 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.UseAntiforgery();
-
 // Add login endpoint 
 app.MapPost("/api/login", async (HttpContext context, IAuthService authService) =>
 {
@@ -256,6 +254,9 @@ app.MapGet("/logout", async (HttpContext context) =>
     await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
     return Results.Redirect("/");
 });
+
+// Add antiforgery after authentication but before Blazor components
+app.UseAntiforgery();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()

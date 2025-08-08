@@ -1,6 +1,5 @@
 {
-    "dotnet.defaultSolution": "AspireDeezNuts.slnx",
-    "makefile.configureOnOpen": false,
+    "dotnet.defaultSolution": "aspire-oop.slnx",
     "cSpell.useGitignore": true,
     "cSpell.allowCompoundWords": true
 }
