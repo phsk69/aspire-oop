@@ -24,6 +24,7 @@ public class DataSeeder(
         {
             await SeedRolesAsync();
             await SeedInitialAdminAsync();
+            await SeedInitialUserAsync();
         }
         catch (Exception ex)
         {
@@ -35,7 +36,7 @@ public class DataSeeder(
     private async Task SeedRolesAsync()
     {
         string[] roleNames = ["Admin", "User"];
-        
+
         foreach (var roleName in roleNames)
         {
             var roleExists = await _roleManager.RoleExistsAsync(roleName);
@@ -48,7 +49,7 @@ public class DataSeeder(
                 }
                 else
                 {
-                    _logger.LogError("Failed to create role {RoleName}: {Errors}", 
+                    _logger.LogError("Failed to create role {RoleName}: {Errors}",
                         roleName, string.Join(", ", result.Errors.Select(e => e.Description)));
                 }
             }
@@ -111,6 +112,63 @@ public class DataSeeder(
         else
         {
             _logger.LogError("Failed to create initial admin user: {Errors}",
+                string.Join(", ", createResult.Errors.Select(e => e.Description)));
+        }
+    }
+
+    private async Task SeedInitialUserAsync()
+    {
+        var seedConfig = _configuration.GetSection("SeedData:InitialUser");
+        var userEmail = seedConfig["Email"];
+        var userPassword = seedConfig["Password"];
+
+        if (string.IsNullOrEmpty(userEmail) || string.IsNullOrEmpty(userPassword))
+        {
+            _logger.LogWarning("Initial user configuration not found or incomplete. Skipping user seeding");
+            return;
+        }
+
+        var existingUser = await _userManager.FindByEmailAsync(userEmail);
+        if (existingUser != null)
+        {
+            _logger.LogInformation("User with email {Email} already exists, ensuring User role", userEmail);
+            var isInRole = await _userManager.IsInRoleAsync(existingUser, "User");
+            if (!isInRole)
+            {
+                var addToRoleResult = await _userManager.AddToRoleAsync(existingUser, "User");
+                if (!addToRoleResult.Succeeded)
+                {
+                    _logger.LogError("Failed to add existing user to User role: {Errors}",
+                        string.Join(", ", addToRoleResult.Errors.Select(e => e.Description)));
+                }
+            }
+            return;
+        }
+
+        var user = new IdentityUser
+        {
+            UserName = userEmail,
+            Email = userEmail,
+            EmailConfirmed = true
+        };
+
+        var createResult = await _userManager.CreateAsync(user, userPassword);
+        if (createResult.Succeeded)
+        {
+            var roleResult = await _userManager.AddToRoleAsync(user, "User");
+            if (roleResult.Succeeded)
+            {
+                _logger.LogInformation("Successfully created initial user: {Email}", userEmail);
+            }
+            else
+            {
+                _logger.LogError("Created user but failed to assign User role: {Errors}",
+                    string.Join(", ", roleResult.Errors.Select(e => e.Description)));
+            }
+        }
+        else
+        {
+            _logger.LogError("Failed to create initial user: {Errors}",
                 string.Join(", ", createResult.Errors.Select(e => e.Description)));
         }
     }

@@ -21,7 +21,7 @@ if (File.Exists(secretsPath))
 builder.AddServiceDefaults();
 
 // Configure Entity Framework with Identity
-var useInMemoryDb = builder.Configuration.GetValue<bool>("UseInMemoryDatabase", true);
+var useInMemoryDb = builder.Configuration.GetValue("UseInMemoryDatabase", true);
 if (useInMemoryDb)
 {
     builder.Services.AddDbContext<AppIdentityDbContext>(options =>
@@ -165,7 +165,7 @@ builder.Services.AddHttpClient<AspireDeezNuts.Shared.Interfaces.IPostRepository,
 {
     var configuration = serviceProvider.GetRequiredService<IConfiguration>();
     var baseUrl = configuration["ExternalApis:JsonPlaceholder:BaseUrl"] ?? "https://jsonplaceholder.typicode.com";
-    var timeout = configuration.GetValue<int>("ExternalApis:JsonPlaceholder:Timeout", 30);
+    var timeout = configuration.GetValue("ExternalApis:JsonPlaceholder:Timeout", 30);
 
     client.BaseAddress = new Uri(baseUrl);
     client.Timeout = TimeSpan.FromSeconds(timeout);
@@ -174,8 +174,8 @@ builder.Services.AddHttpClient<AspireDeezNuts.Shared.Interfaces.IPostRepository,
 // Configure localization to use British English
 builder.Services.Configure<RequestLocalizationOptions>(options =>
 {
-    var supportedCultures = new[] { new CultureInfo("en-GB") };
-    options.DefaultRequestCulture = new RequestCulture("en-GB");
+    var supportedCultures = new[] { new CultureInfo("en-DK") };
+    options.DefaultRequestCulture = new RequestCulture("en-DK");
     options.SupportedCultures = supportedCultures;
     options.SupportedUICultures = supportedCultures;
     options.FallBackToParentCultures = false;
