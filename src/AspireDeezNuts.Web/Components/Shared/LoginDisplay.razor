@@ -1,0 +1,68 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@inject NavigationManager Navigation
+@inject ILogger<LoginDisplay> Logger
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@implements IDisposable
+@rendermode InteractiveServer
+
+<AuthorizeView>
+    <Authorized>
+        <div class="d-flex align-items-center">
+            <span class="me-3">Hello, @context.User.Identity?.Name!</span>
+            <Button Color="ButtonColor.Light" Size="ButtonSize.Small" @onclick="LogoutAsync">
+                <Icon Name="IconName.BoxArrowRight" class="me-1" />
+                Logout
+            </Button>
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <Button Color="ButtonColor.Primary" Size="ButtonSize.Small" @onclick="Login">
+            <Icon Name="IconName.BoxArrowInRight" class="me-1" />
+            Login
+        </Button>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    protected override void OnInitialized()
+    {
+        // Subscribe to authentication state changes
+        AuthenticationStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+    }
+
+    private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
+    {
+        try
+        {
+            var authState = await task;
+            Logger.LogInformation("Authentication state changed - User authenticated: {IsAuthenticated}, User: {UserName}", 
+                authState.User?.Identity?.IsAuthenticated ?? false,
+                authState.User?.Identity?.Name ?? "Anonymous");
+            
+            // Force UI update on the UI thread
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error handling authentication state change");
+        }
+    }
+
+    private void LogoutAsync()
+    {
+        Logger.LogInformation("Starting logout process...");
+        Navigation.NavigateTo("/logout", forceLoad: true);
+    }
+
+    private void Login()
+    {
+        Logger.LogInformation("Login button clicked, navigating to /login");
+        Navigation.NavigateTo("/login");
+    }
+
+    public void Dispose()
+    {
+        // Unsubscribe from authentication state changes to prevent memory leaks
+        AuthenticationStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+    }
+}

@@ -1,3 +1,5 @@
 {
-    "dotnet.defaultSolution": "AspireDeezNuts.slnx"
+    "dotnet.defaultSolution": "aspire-oop.slnx",
+    "cSpell.useGitignore": true,
+    "cSpell.allowCompoundWords": true
 }

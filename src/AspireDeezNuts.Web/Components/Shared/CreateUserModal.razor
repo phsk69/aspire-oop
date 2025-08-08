@@ -1,0 +1,60 @@
+@using BlazorBootstrap
+@using AspireDeezNuts.Shared.Models
+
+<EditForm Model="UserData" OnValidSubmit="OnSaveClick">
+    <DataAnnotationsValidator />
+    
+    <div class="mb-3">
+        <label class="form-label">Email <span class="text-danger">*</span></label>
+        <InputText @bind-Value="UserData.Email" class="form-control" placeholder="user@example.com" />
+        <ValidationMessage For="@(() => UserData.Email)" />
+    </div>
+    
+    <div class="mb-3">
+        <label class="form-label">Username <span class="text-danger">*</span></label>
+        <InputText @bind-Value="UserData.UserName" class="form-control" placeholder="username" />
+        <ValidationMessage For="@(() => UserData.UserName)" />
+    </div>
+    
+    <div class="mb-3">
+        <label class="form-label">Password <span class="text-danger">*</span></label>
+        <InputText @bind-Value="UserData.Password" type="password" class="form-control" placeholder="Password" />
+        <ValidationMessage For="@(() => UserData.Password)" />
+    </div>
+    
+    <div class="mb-3">
+        <div class="form-check">
+            <InputCheckbox @bind-Value="UserData.IsAdmin" class="form-check-input" id="isAdminCheck" />
+            <label class="form-check-label" for="isAdminCheck">
+                <Icon Name="IconName.ShieldFill" /> Administrator
+            </label>
+        </div>
+    </div>
+    
+    <div class="d-flex justify-content-end gap-2">
+        <Button Color="ButtonColor.Secondary" @onclick="OnCancelClick">
+            <Icon Name="IconName.XCircle" /> Cancel
+        </Button>
+        <Button Color="ButtonColor.Primary" Type="ButtonType.Submit">
+            <Icon Name="IconName.PersonPlusFill" /> Create User
+        </Button>
+    </div>
+</EditForm>
+
+@code {
+    [Parameter] public CreateUserDto UserData { get; set; } = new();
+    [Parameter] public EventCallback<CreateUserDto> OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private async Task OnSaveClick()
+    {
+        if (OnSave.HasDelegate)
+            await OnSave.InvokeAsync(UserData);
+    }
+
+    private async Task OnCancelClick()
+    {
+        if (OnCancel.HasDelegate)
+            await OnCancel.InvokeAsync();
+    }
+}

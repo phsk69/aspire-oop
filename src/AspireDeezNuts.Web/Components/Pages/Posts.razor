@@ -1,0 +1,182 @@
+@page "/posts"
+@using System.Text.Json
+@using AspireDeezNuts.Shared.Models
+@inject IHttpClientFactory HttpClientFactory
+@inject ILogger<Posts> Logger
+@inject IToastService ToastService
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Posts</PageTitle>
+
+<h1>Blog Posts</h1>
+
+<p>This component demonstrates fetching data from the API service.</p>
+
+@if (posts == null)
+{
+    <div class="d-flex justify-content-center">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else if (!posts.Any())
+{
+    <Alert Color="AlertColor.Warning">
+        <Icon Name="IconName.ExclamationTriangle" class="me-2" />
+        No posts available.
+    </Alert>
+}
+else
+{
+    <div class="mb-3 d-flex justify-content-between align-items-center">
+        <Badge Color="BadgeColor.Info">
+            Total Posts: @posts.Count()
+        </Badge>
+        
+        <div class="d-flex align-items-center gap-2">
+            <label class="me-2">Posts per page:</label>
+            <select class="form-select form-select-sm" style="width: auto;" @onchange="OnPageSizeChanged">
+                <option value="10" selected="@(pageSize == 10)">10</option>
+                <option value="25" selected="@(pageSize == 25)">25</option>
+                <option value="50" selected="@(pageSize == 50)">50</option>
+                <option value="100" selected="@(pageSize == 100)">100</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="row">
+        @foreach (var post in paginatedPosts)
+        {
+            <div class="col-md-6 col-lg-4 mb-3">
+                <Card>
+                    <CardHeader>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">Post #@post.Id</small>
+                            <Badge Color="BadgeColor.Secondary">User @post.UserId</Badge>
+                        </div>
+                    </CardHeader>
+                    <CardBody>
+                        <CardTitle>@post.Title</CardTitle>
+                        <CardText>
+                            @if (post.Body.Length > 100)
+                            {
+                                @(post.Body.Substring(0, 100) + "...")
+                            }
+                            else
+                            {
+                                @post.Body
+                            }
+                        </CardText>
+                        <Button Color="ButtonColor.Primary" Size="ButtonSize.Small" @onclick="() => ShowPostDetails(post)">
+                            Read More
+                        </Button>
+                    </CardBody>
+                </Card>
+            </div>
+        }
+    </div>
+
+    <div class="d-flex justify-content-center mt-4">
+        <Pagination ActivePageNumber="@currentPage"
+                    TotalPages="@totalPages"
+                    PageChanged="@OnPageChanged"
+                    DisplayPages="5"
+                    FirstLinkIcon="IconName.ChevronDoubleLeft"
+                    PreviousLinkIcon="IconName.ChevronLeft"
+                    NextLinkIcon="IconName.ChevronRight"
+                    LastLinkIcon="IconName.ChevronDoubleRight" />
+    </div>
+}
+
+@if (selectedPost != null)
+{
+    <Modal @ref="modal" Title="@selectedPost.Title" IsVerticallyCentered="true" Size="ModalSize.Large">
+        <BodyTemplate>
+            <div class="mb-2">
+                <Badge Color="BadgeColor.Info">Post #@selectedPost.Id</Badge>
+                <Badge Color="BadgeColor.Secondary" class="ms-2">By User @selectedPost.UserId</Badge>
+            </div>
+            <p>@selectedPost.Body</p>
+        </BodyTemplate>
+        <FooterTemplate>
+            <Button Color="ButtonColor.Secondary" @onclick="HideModal">Close</Button>
+        </FooterTemplate>
+    </Modal>
+}
+
+@code {
+    private Post[]? posts;
+    private Post? selectedPost;
+    private Modal modal = default!;
+    private int currentPage = 1;
+    private int pageSize = 10;
+    private int totalPages => posts != null ? (int)Math.Ceiling((double)posts.Length / pageSize) : 0;
+    private IEnumerable<Post> paginatedPosts => posts?.Skip((currentPage - 1) * pageSize).Take(pageSize) ?? Enumerable.Empty<Post>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPostsWithRetryAsync();
+    }
+
+    private async Task LoadPostsWithRetryAsync()
+    {
+        const int maxRetries = 3;
+        const int delayMs = 1000;
+
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
+        {
+            try
+            {
+                Logger.LogInformation("Attempting to fetch posts from API service (attempt {Attempt}/{MaxRetries})", attempt, maxRetries);
+                
+                using var httpClient = HttpClientFactory.CreateClient("authenticated-api");
+                posts = await httpClient.GetFromJsonAsync<Post[]>("api/v1/posts");
+                
+                Logger.LogInformation("Successfully fetched {PostCount} posts", posts?.Length ?? 0);
+                return;
+            }
+            catch (Exception ex) when (attempt < maxRetries)
+            {
+                Logger.LogWarning(ex, "Failed to fetch posts on attempt {Attempt}/{MaxRetries}. Retrying in {DelayMs}ms", attempt, maxRetries, delayMs);
+                ToastService.ShowWarning($"Failed to load posts. Retrying... (Attempt {attempt}/{maxRetries})");
+                await Task.Delay(delayMs * attempt);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Failed to fetch posts after {MaxRetries} attempts", maxRetries);
+                ToastService.ShowError("Unable to load posts. Please try refreshing the page.", "Load Failed");
+                posts = [];
+                return;
+            }
+        }
+    }
+
+    private async Task ShowPostDetails(Post post)
+    {
+        selectedPost = post;
+        await modal.ShowAsync();
+    }
+
+    private async Task HideModal()
+    {
+        await modal.HideAsync();
+    }
+
+    private async Task OnPageChanged(int newPageNumber)
+    {
+        currentPage = newPageNumber;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnPageSizeChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var newPageSize))
+        {
+            pageSize = newPageSize;
+            currentPage = 1; // Reset to first page when changing page size
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+}

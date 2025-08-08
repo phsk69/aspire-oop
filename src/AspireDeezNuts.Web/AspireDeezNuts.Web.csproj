@@ -8,6 +8,14 @@
 
   <ItemGroup>
     <PackageReference Include="Blazor.Bootstrap" Version="3.4.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="9.0.8" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.8" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.13.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AspireDeezNuts.ServiceDefaults\AspireDeezNuts.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\AspireDeezNuts.Shared\AspireDeezNuts.Shared.csproj" />
   </ItemGroup>
 
 </Project>

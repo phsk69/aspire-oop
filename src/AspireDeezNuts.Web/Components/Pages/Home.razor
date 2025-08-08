@@ -1,7 +1,298 @@
-﻿@page "/"
+@page "/"
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+@implements IDisposable
 
 <PageTitle>Home</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="jumbotron bg-primary text-white rounded p-5 mb-4">
+                <div class="text-center">
+                    <Icon Name="IconName.HouseDoorFill" Size="IconSize.x3" class="mb-3" />
+                    <h1 class="display-4 fw-bold">Welcome to AspireDeezNuts</h1>
+                    <p class="lead fs-4">A modern Blazor application with JWT authentication and design patterns</p>
+                </div>
+            </div>
+        </div>
+    </div>
 
-Welcome to your new app.
+    <AuthorizeView>
+        <Authorized>
+            <div class="row mb-4">
+                <div class="col-12">
+                    <Card>
+                        <CardHeader class="bg-success text-white">
+                            <div class="d-flex align-items-center">
+                                <Icon Name="IconName.PersonCheckFill" Size="IconSize.x1" class="me-2" />
+                                <strong>Welcome back, @context.User.Identity?.Name!</strong>
+                                <Badge Color="BadgeColor.Light" class="ms-auto">
+                                    <Icon Name="IconName.Shield" class="me-1" />
+                                    Authenticated
+                                </Badge>
+                            </div>
+                        </CardHeader>
+                        <CardBody>
+                            <div class="row g-3">
+                                <div class="col-md-8">
+                                    <div class="d-flex align-items-start">
+                                        <Icon Name="IconName.InfoCircle" class="text-primary me-2 mt-1" />
+                                        <div>
+                                            <p class="mb-2">You're successfully authenticated and can access all features of the application.</p>
+                                            <div class="d-flex flex-wrap gap-2">
+                                                @{
+                                                    var userRoles = context.User.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
+                                                }
+                                                @if (userRoles.Any())
+                                                {
+                                                    <span class="small text-muted me-2">Your roles:</span>
+                                                    @foreach (var role in userRoles)
+                                                    {
+                                                        <Badge Color="@(role == "Admin" ? BadgeColor.Danger : BadgeColor.Info)">
+                                                            @role
+                                                        </Badge>
+                                                    }
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 text-center">
+                                    <Button Color="ButtonColor.Primary" Size="ButtonSize.Large" @onclick="@(() => Navigation.NavigateTo("/profile"))">
+                                        <Icon Name="IconName.PersonCircle" class="me-1" />
+                                        View Profile
+                                    </Button>
+                                    <div class="small text-muted mt-1">
+                                        <Icon Name="IconName.Key" class="me-1" />
+                                        Demo token refresh
+                                    </div>
+                                </div>
+                            </div>
+                        </CardBody>
+                    </Card>
+                </div>
+            </div>
+        </Authorized>
+        <NotAuthorized>
+            <div class="row mb-4">
+                <div class="col-12">
+                    <Alert Color="AlertColor.Info">
+                        <div class="d-flex align-items-center">
+                            <Icon Name="IconName.InfoCircle" Size="IconSize.x1" class="me-2" />
+                            <div class="flex-grow-1">
+                                <strong>Welcome, Guest!</strong>
+                                <p class="mb-2">To access all features including posts and user management, please log in to your account.</p>
+                            </div>
+                            <Button Color="ButtonColor.Primary" @onclick="@(() => Navigation.NavigateTo("/login"))">
+                                <Icon Name="IconName.BoxArrowInRight" class="me-1" />
+                                Login
+                            </Button>
+                        </div>
+                    </Alert>
+                </div>
+            </div>
+        </NotAuthorized>
+    </AuthorizeView>
+
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <Card class="h-100">
+                <CardHeader>
+                    <Icon Name="IconName.ListNested" class="me-2" />
+                    Posts Management
+                </CardHeader>
+                <CardBody class="d-flex flex-column">
+                    <div class="flex-grow-1">
+                        <p class="text-muted">Browse and manage posts with external API integration and pagination.</p>
+                        <AuthorizeView>
+                            <Authorized>
+                                <Badge Color="BadgeColor.Success" class="mb-2">
+                                    <Icon Name="IconName.CheckCircle" class="me-1" />
+                                    Available
+                                </Badge>
+                            </Authorized>
+                            <NotAuthorized>
+                                <Badge Color="BadgeColor.Warning" class="mb-2">
+                                    <Icon Name="IconName.Lock" class="me-1" />
+                                    Login Required
+                                </Badge>
+                            </NotAuthorized>
+                        </AuthorizeView>
+                    </div>
+                    <div class="mt-auto">
+                        <Button Color="ButtonColor.Primary" Size="ButtonSize.Large" class="w-100" @onclick="@(() => Navigation.NavigateTo("/posts"))">
+                            <Icon Name="IconName.ListNested" class="me-1" />
+                            View Posts
+                        </Button>
+                    </div>
+                </CardBody>
+            </Card>
+        </div>
+
+        <div class="col-lg-4">
+            <Card class="h-100">
+                <CardHeader>
+                    <Icon Name="IconName.PlusSquareFill" class="me-2" />
+                    Interactive Demo
+                </CardHeader>
+                <CardBody class="d-flex flex-column">
+                    <div class="flex-grow-1">
+                        <p class="text-muted">Try the interactive counter component to see Blazor Server in action.</p>
+                        <AuthorizeView>
+                            <Authorized>
+                                <Badge Color="BadgeColor.Success" class="mb-2">
+                                    <Icon Name="IconName.CheckCircle" class="me-1" />
+                                    Available
+                                </Badge>
+                            </Authorized>
+                            <NotAuthorized>
+                                <Badge Color="BadgeColor.Warning" class="mb-2">
+                                    <Icon Name="IconName.Lock" class="me-1" />
+                                    Login Required
+                                </Badge>
+                            </NotAuthorized>
+                        </AuthorizeView>
+                    </div>
+                    <div class="mt-auto">
+                        <Button Color="ButtonColor.Success" Size="ButtonSize.Large" class="w-100" @onclick="@(() => Navigation.NavigateTo("/counter"))">
+                            <Icon Name="IconName.PlusSquareFill" class="me-1" />
+                            Try Counter
+                        </Button>
+                    </div>
+                </CardBody>
+            </Card>
+        </div>
+
+        <div class="col-lg-4">
+            <AuthorizeView>
+                <Authorized>
+                    <Card class="h-100">
+                        <CardHeader>
+                            <Icon Name="IconName.Key" class="me-2" />
+                            Token Demo
+                        </CardHeader>
+                        <CardBody class="d-flex flex-column">
+                            <div class="flex-grow-1">
+                                <p class="text-muted">Explore JWT token refresh functionality and view authentication details.</p>
+                                <Badge Color="BadgeColor.Info" class="mb-2">
+                                    <Icon Name="IconName.PersonCircle" class="me-1" />
+                                    Personal Profile
+                                </Badge>
+                            </div>
+                            <div class="mt-auto">
+                                <Button Color="ButtonColor.Info" Size="ButtonSize.Large" class="w-100" @onclick="@(() => Navigation.NavigateTo("/profile"))">
+                                    <Icon Name="IconName.PersonCircle" class="me-1" />
+                                    My Profile
+                                </Button>
+                            </div>
+                        </CardBody>
+                    </Card>
+                </Authorized>
+                <NotAuthorized>
+                    <Card class="h-100 border-warning">
+                        <CardHeader class="bg-warning">
+                            <Icon Name="IconName.ExclamationTriangleFill" class="me-2" />
+                            Authentication Required
+                        </CardHeader>
+                        <CardBody class="d-flex flex-column">
+                            <div class="flex-grow-1">
+                                <p class="text-muted">Log in to access your profile and explore JWT token management features.</p>
+                                <Badge Color="BadgeColor.Warning" class="mb-2">
+                                    <Icon Name="IconName.Lock" class="me-1" />
+                                    Login Required
+                                </Badge>
+                            </div>
+                            <div class="mt-auto">
+                                <Button Color="ButtonColor.Warning" Size="ButtonSize.Large" class="w-100" @onclick="@(() => Navigation.NavigateTo("/login"))">
+                                    <Icon Name="IconName.BoxArrowInRight" class="me-1" />
+                                    Login Now
+                                </Button>
+                            </div>
+                        </CardBody>
+                    </Card>
+                </NotAuthorized>
+            </AuthorizeView>
+        </div>
+    </div>
+
+    <AuthorizeView Roles="Admin">
+        <Authorized>
+            <div class="row mt-4">
+                <div class="col-12">
+                    <Alert Color="AlertColor.Primary">
+                        <div class="d-flex align-items-center">
+                            <Icon Name="IconName.ShieldFillCheck" Size="IconSize.x1" class="me-2" />
+                            <div class="flex-grow-1">
+                                <strong>Administrator Access</strong>
+                                <p class="mb-2">You have admin privileges and can manage users and system settings.</p>
+                            </div>
+                            <Button Color="ButtonColor.Danger" @onclick="@(() => Navigation.NavigateTo("/admin/users"))">
+                                <Icon Name="IconName.PeopleFill" class="me-1" />
+                                User Admin
+                            </Button>
+                        </div>
+                    </Alert>
+                </div>
+            </div>
+        </Authorized>
+    </AuthorizeView>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <Card>
+                <CardHeader>
+                    <Icon Name="IconName.Gear" class="me-2" />
+                    Technology Stack
+                </CardHeader>
+                <CardBody>
+                    <div class="row g-3">
+                        <div class="col-md-3 text-center">
+                            <Icon Name="IconName.Microsoft" Size="IconSize.x2" class="text-primary mb-2" />
+                            <h6>.NET 9 & Aspire</h6>
+                            <small class="text-muted">Modern cloud-native development</small>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <Icon Name="IconName.Bootstrap" Size="IconSize.x2" class="text-success mb-2" />
+                            <h6>Blazor Bootstrap</h6>
+                            <small class="text-muted">Beautiful UI components</small>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <Icon Name="IconName.Key" Size="IconSize.x2" class="text-warning mb-2" />
+                            <h6>JWT Authentication</h6>
+                            <small class="text-muted">Secure token-based auth</small>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <Icon Name="IconName.Hdd" Size="IconSize.x2" class="text-info mb-2" />
+                            <h6>Kubernetes Ready</h6>
+                            <small class="text-muted">Cloud deployment</small>
+                        </div>
+                    </div>
+                </CardBody>
+            </Card>
+        </div>
+    </div>
+</div>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        // Subscribe to authentication state changes
+        AuthenticationStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+        await base.OnInitializedAsync();
+    }
+
+    private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
+    {
+        // Force UI update when authentication state changes
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        AuthenticationStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+    }
+}

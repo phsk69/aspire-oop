@@ -1,0 +1,59 @@
+@page "/login"
+@attribute [AllowAnonymous]
+@inject NavigationManager Navigation
+@inject IToastService ToastService
+
+<PageTitle>Login</PageTitle>
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-4">
+            <Card>
+                <CardHeader Class="text-center">
+                    <h4>Login</h4>
+                </CardHeader>
+                <CardBody>
+                    
+                    <form method="post" action="/api/login">
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <input id="email" name="Email" type="email" class="form-control" placeholder="Enter email" value="admin@example.com" required />
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <input id="password" name="Password" type="password" class="form-control" placeholder="Enter password" value="AdminPass123!" required />
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">Login</button>
+                        </div>
+                    </form>
+                    
+                    <div class="mt-3 text-center">
+                        <small class="text-muted">
+                            User info: <br/>
+                            DEV: src/AspireDeezNuts.ApiService/appsettings.Development.secrets.json<br/>
+                            Kubernetes: aspire-admin-seed secret
+                        </small>
+                    </div>
+                </CardBody>
+            </Card>
+        </div>
+    </div>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        // Check for error query parameter
+        var uri = new Uri(Navigation.Uri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        var error = query["error"];
+        
+        if (!string.IsNullOrEmpty(error))
+        {
+            ToastService.ShowError(error, "Login Failed");
+        }
+    }
+}

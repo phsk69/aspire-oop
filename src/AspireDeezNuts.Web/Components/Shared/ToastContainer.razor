@@ -1,0 +1,45 @@
+@using BlazorBootstrap
+@implements IDisposable
+@inject IToastService ToastService
+@inject ILogger<ToastContainer> Logger
+@rendermode InteractiveServer
+
+<Toasts class="p-3" Messages="toastMessages" Placement="ToastsPlacement.TopRight" />
+
+@code {
+    private List<ToastMessage> toastMessages = new();
+
+    private bool _subscribed = false;
+
+    protected override void OnInitialized()
+    {
+        Logger.LogDebug("ToastContainer OnInitialized - subscribing to ToastService");
+        ToastService.OnShow += ShowToast;
+        _subscribed = true;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_subscribed)
+        {
+            Logger.LogDebug("ToastContainer OnAfterRenderAsync (firstRender) - subscribing to ToastService");
+            ToastService.OnShow += ShowToast;
+            _subscribed = true;
+        }
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    private void ShowToast(ToastMessage message)
+    {
+        Logger.LogDebug("ToastContainer.ShowToast called: {Type} - {Message}", message.Type, message.Message);
+        toastMessages.Add(message);
+        Logger.LogDebug("ToastContainer now has {Count} messages", toastMessages.Count);
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Logger.LogDebug("ToastContainer disposing - unsubscribing from ToastService");
+        ToastService.OnShow -= ShowToast;
+    }
+}
