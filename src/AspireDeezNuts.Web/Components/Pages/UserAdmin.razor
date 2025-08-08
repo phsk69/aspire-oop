@@ -1,0 +1,268 @@
+@page "/admin/users"
+@using Microsoft.AspNetCore.Authorization
+@using BlazorBootstrap
+@using AspireDeezNuts.Shared.Models
+@using AspireDeezNuts.Web.Services
+@attribute [Authorize(Roles = "Admin")]
+@rendermode InteractiveServer
+@inject IHttpClientFactory HttpClientFactory
+@inject ILogger<UserAdmin> Logger
+@inject IJsonSerializationService JsonSerialization
+@inject IToastService ToastService
+
+<PageTitle>User Administration</PageTitle>
+
+<h1>User Administration</h1>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <Card>
+            <CardHeader>
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Manage Users</h5>
+                    <Button Color="ButtonColor.Primary" Size="ButtonSize.Small" @onclick="ShowCreateUserModal">
+                        <Icon Name="IconName.PersonPlusFill" /> Add User
+                    </Button>
+                </div>
+            </CardHeader>
+            <CardBody>
+                @if (users == null)
+                {
+                    <div class="text-center py-3">
+                        <Spinner Type="SpinnerType.Border" />
+                        <p class="mt-2">Loading users...</p>
+                    </div>
+                }
+                else if (!users.Any())
+                {
+                    <Alert Color="AlertColor.Info">
+                        No users found in the system.
+                    </Alert>
+                }
+                else
+                {
+                    <Grid TItem="UserDto"
+                          Class="table table-hover"
+                          Data="users"
+                          AllowPaging="true"
+                          PageSize="10"
+                          Responsive="true">
+                        <GridColumn TItem="UserDto" HeaderText="Email" PropertyName="Email">
+                            @context.Email
+                        </GridColumn>
+                        <GridColumn TItem="UserDto" HeaderText="Username" PropertyName="UserName">
+                            @context.UserName
+                        </GridColumn>
+                        <GridColumn TItem="UserDto" HeaderText="Roles" PropertyName="Roles">
+                            @if (context.Roles?.Any() == true)
+                            {
+                                @foreach (var role in context.Roles)
+                                {
+                                    <Badge Color="BadgeColor.Primary" Class="me-1">@role</Badge>
+                                }
+                            }
+                            else
+                            {
+                                <Badge Color="BadgeColor.Secondary">No Roles</Badge>
+                            }
+                        </GridColumn>
+                        <GridColumn TItem="UserDto" HeaderText="Email Confirmed" PropertyName="EmailConfirmed">
+                            @if (context.EmailConfirmed)
+                            {
+                                <Badge Color="BadgeColor.Success">
+                                    <Icon Name="IconName.CheckCircleFill" /> Confirmed
+                                </Badge>
+                            }
+                            else
+                            {
+                                <Badge Color="BadgeColor.Warning">
+                                    <Icon Name="IconName.ExclamationCircleFill" /> Pending
+                                </Badge>
+                            }
+                        </GridColumn>
+                        <GridColumn TItem="UserDto" HeaderText="Actions">
+                            <Button Color="ButtonColor.Info" Size="ButtonSize.Small" @onclick="() => EditUser(context)">
+                                <Icon Name="IconName.PencilFill" />
+                            </Button>
+                            <Button Color="ButtonColor.Warning" Size="ButtonSize.Small" @onclick="() => ToggleUserRole(context)" Class="ms-1">
+                                <Icon Name="IconName.ShieldFill" />
+                            </Button>
+                            <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" @onclick="() => DeleteUser(context)" Class="ms-1">
+                                <Icon Name="IconName.TrashFill" />
+                            </Button>
+                        </GridColumn>
+                    </Grid>
+                }
+            </CardBody>
+        </Card>
+    </div>
+</div>
+
+<Modal @ref="createUserModal" Title="Create New User" Size="ModalSize.Regular" UseStaticBackdrop="true" />
+
+
+@code {
+    private List<UserDto>? users;
+    private Modal createUserModal = default!;
+    private CreateUserDto newUser = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsers();
+    }
+
+    private async Task LoadUsers()
+    {
+        try
+        {
+            using var httpClient = HttpClientFactory.CreateClient("authenticated-api");
+            var response = await httpClient.GetAsync("api/v1/User");
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                users = JsonSerialization.Deserialize<List<UserDto>>(json);
+                Logger.LogInformation("Loaded {Count} users", users?.Count ?? 0);
+            }
+            else
+            {
+                Logger.LogWarning("Failed to load users. Status: {StatusCode}", response.StatusCode);
+                ToastService.ShowError($"Failed to load users: {response.ReasonPhrase}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading users");
+            ToastService.ShowError("Error loading users");
+        }
+    }
+
+    private async Task ShowCreateUserModal()
+    {
+        newUser = new CreateUserDto();
+        
+        var parameters = new Dictionary<string, object>();
+        parameters.Add("UserData", newUser);
+        parameters.Add("OnSave", EventCallback.Factory.Create<CreateUserDto>(this, HandleCreateUser));
+        parameters.Add("OnCancel", EventCallback.Factory.Create(this, HideCreateUserModal));
+        
+        await createUserModal.ShowAsync<Shared.CreateUserModal>(
+            title: "Create New User",
+            parameters: parameters);
+    }
+
+    private async Task HideCreateUserModal()
+    {
+        await createUserModal.HideAsync();
+    }
+    
+    private async Task HandleCreateUser(CreateUserDto userToCreate)
+    {
+        await CreateUserFromData(userToCreate);
+        await HideCreateUserModal();
+    }
+
+    private async Task CreateUser()
+    {
+        // This method is kept for the inline form in the modal footer if needed
+        await CreateUserFromData(newUser);
+    }
+    
+    private async Task CreateUserFromData(CreateUserDto userToCreate)
+    {
+        try
+        {
+            var json = JsonSerialization.Serialize(userToCreate);
+            var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+            
+            using var httpClient = HttpClientFactory.CreateClient("authenticated-api");
+            var response = await httpClient.PostAsync("api/v1/user", content);
+            if (response.IsSuccessStatusCode)
+            {
+                ToastService.ShowSuccess($"User {userToCreate.Email} created successfully");
+                await LoadUsers();
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                Logger.LogWarning("Failed to create user. Status: {StatusCode}, Content: {Content}", response.StatusCode, errorContent);
+                ToastService.ShowError($"Failed to create user: {response.ReasonPhrase}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error creating user");
+            ToastService.ShowError("Error creating user");
+        }
+    }
+
+    private Task EditUser(UserDto user)
+    {
+        // TODO: Implement edit user functionality
+        ToastService.ShowInfo($"Edit user {user.Email} - Not yet implemented");
+        return Task.CompletedTask;
+    }
+
+    private async Task ToggleUserRole(UserDto user)
+    {
+        try
+        {
+            var isAdmin = user.Roles?.Contains("Admin") ?? false;
+            var roleUpdate = new UserRoleUpdateDto
+            {
+                UserId = user.Id,
+                Role = "Admin",
+                AddRole = !isAdmin
+            };
+            
+            var json = JsonSerialization.Serialize(roleUpdate);
+            var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+            
+            using var httpClient = HttpClientFactory.CreateClient("authenticated-api");
+            var response = await httpClient.PostAsync($"api/v1/user/{user.Id}/roles", content);
+            if (response.IsSuccessStatusCode)
+            {
+                var action = isAdmin ? "removed from" : "added to";
+                ToastService.ShowSuccess($"User {user.Email} {action} Admin role");
+                await LoadUsers();
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                Logger.LogWarning("Failed to update user role. Status: {StatusCode}, Content: {Content}", response.StatusCode, errorContent);
+                ToastService.ShowError($"Failed to update user role: {response.ReasonPhrase}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error updating user role");
+            ToastService.ShowError("Error updating user role");
+        }
+    }
+
+    private async Task DeleteUser(UserDto user)
+    {
+        try
+        {
+            // TODO: Add confirmation dialog
+            using var httpClient = HttpClientFactory.CreateClient("authenticated-api");
+            var response = await httpClient.DeleteAsync($"api/v1/user/{user.Id}");
+            if (response.IsSuccessStatusCode)
+            {
+                ToastService.ShowSuccess($"User {user.Email} deleted successfully");
+                await LoadUsers();
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                Logger.LogWarning("Failed to delete user. Status: {StatusCode}, Content: {Content}", response.StatusCode, errorContent);
+                ToastService.ShowError($"Failed to delete user: {response.ReasonPhrase}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error deleting user");
+            ToastService.ShowError("Error deleting user");
+        }
+    }
+
+}

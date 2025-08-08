@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aspire-dashboard
+  labels:
+    app: aspire-dashboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aspire-dashboard
+  template:
+    metadata:
+      labels:
+        app: aspire-dashboard
+    spec:
+      containers:
+        - name: aspire-dashboard
+          image: mcr.microsoft.com/dotnet/aspire-dashboard:9.0
+          ports:
+            - containerPort: 18888
+              name: frontend
+            - containerPort: 18443
+              name: frontend-https
+            - containerPort: 18889
+              name: otlp-grpc
+            - containerPort: 18890
+              name: otlp-https
+            - containerPort: 18892
+              name: resource-svc
+          envFrom:
+            - secretRef:
+                name: aspire-these-nutz
+            - configMapRef:
+                name: aspire-dashboard-config
+          volumeMounts:
+            - name: dashboard-storage
+              mountPath: /root/.aspnet/DataProtection-Keys
+            - name: tls-certs
+              mountPath: /tls
+              readOnly: true
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+      volumes:
+        - name: dashboard-storage
+          persistentVolumeClaim:
+            claimName: aspire-dashboard-data
+        - name: tls-certs
+          secret:
+            secretName: aspire-dashboard-tls
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aspire-dashboard
+spec:
+  selector:
+    app: aspire-dashboard
+  ports:
+    - port: 18888
+      targetPort: 18888
+      name: frontend
+    - port: 18443
+      targetPort: 18443
+      name: frontend-https
+    - port: 18889
+      targetPort: 18889
+      name: otlp-grpc
+    - port: 18890
+      targetPort: 18890
+      name: otlp-https
+    - port: 18892
+      targetPort: 18892
+      name: resource-svc

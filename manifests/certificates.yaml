@@ -1,0 +1,56 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: aspire-web-tls
+  namespace: default
+spec:
+  secretName: aspire-web-tls
+  issuerRef:
+    name: aspire-deez-nuts-ca-issuer
+    kind: ClusterIssuer
+  commonName: aspire-deez-nuts-web.default.svc.cluster.local
+  dnsNames:
+  - aspire-deez-nuts-web
+  - aspire-deez-nuts-web.default
+  - aspire-deez-nuts-web.default.svc
+  - aspire-deez-nuts-web.default.svc.cluster.local
+  duration: 8760h # 1 year
+  renewBefore: 720h # 30 days
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: aspire-api-tls
+  namespace: default
+spec:
+  secretName: aspire-api-tls
+  issuerRef:
+    name: aspire-deez-nuts-ca-issuer
+    kind: ClusterIssuer
+  commonName: aspire-deez-nuts-api.default.svc.cluster.local
+  dnsNames:
+  - aspire-deez-nuts-api
+  - aspire-deez-nuts-api.default
+  - aspire-deez-nuts-api.default.svc
+  - aspire-deez-nuts-api.default.svc.cluster.local
+  duration: 8760h # 1 year
+  renewBefore: 720h # 30 days
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: aspire-dashboard-tls
+  namespace: default
+spec:
+  secretName: aspire-dashboard-tls
+  issuerRef:
+    name: aspire-deez-nuts-ca-issuer
+    kind: ClusterIssuer
+  commonName: aspire-dashboard.default.svc.cluster.local
+  dnsNames:
+  - aspire-dashboard
+  - aspire-dashboard.default
+  - aspire-dashboard.default.svc
+  - aspire-dashboard.default.svc.cluster.local
+  duration: 8760h # 1 year
+  renewBefore: 720h # 30 days

@@ -131,3 +131,16 @@ $RECYCLE.BIN/
 .DS_Store
 
 _NCrunch*
+
+# User-specific files
+.claude/*
+
+# Kubernetes artifacts
+**/manifests/*secret*.yaml
+aspirate-state.json
+manifest.json
+publish/
+
+# Secret configuration files
+**/appsettings.*.secrets.json
+!**/appsettings.*.secrets.template.json
