@@ -16,15 +16,45 @@ on:
         type: boolean
         default: false
 
+env:
+  DOTNET_VERSION: '9.0.x'
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
 jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: https://github.com/actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.RUNNER_TOKEN }}
+      
+      - name: Generate secrets files for testing
+        run: |
+          cp src/AspireDeezNuts.ApiService/appsettings.Development.secrets.template.json src/AspireDeezNuts.ApiService/appsettings.Development.secrets.json
+          cp tests/AspireDeezNuts.ApiService.Tests/appsettings.Development.secrets.template.json tests/AspireDeezNuts.ApiService.Tests/appsettings.Development.secrets.json
+      
+      - name: Restore dependencies
+        run: make restore
+      
+      - name: Build solution
+        run: make build
+      
+      - name: Run tests
+        run: make test
+
   create-release-pr:
     name: Create Release PR to Main
     runs-on: ubuntu-latest
+    needs: test
     if: startsWith(github.ref, 'refs/heads/release/') || github.event_name == 'workflow_dispatch'
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: https://github.com/actions/checkout@v4
         with:
           fetch-depth: 0
           token: ${{ secrets.RUNNER_TOKEN }}
@@ -48,8 +78,8 @@ jobs:
           # Check if PR already exists from release branch to main
           PR_EXISTS=$(curl -s \
             -H "Authorization: token ${{ secrets.RUNNER_TOKEN }}" \
-            -H "Accept: application/vnd.github.v3+json" \
-            "${{ github.api_url }}/repos/${{ github.repository }}/pulls?head=${{ github.repository_owner }}:${{ steps.version.outputs.branch }}&base=main" \
+            -H "Accept: application/json" \
+            "${{ github.server_url }}/api/v1/repos/${{ github.repository }}/pulls?state=open&head=${{ steps.version.outputs.branch }}&base=main" \
             | jq length)
           
           if [ "$PR_EXISTS" -gt 0 ]; then
@@ -64,8 +94,11 @@ jobs:
         id: commits
         if: steps.check_pr.outputs.exists == 'false'
         run: |
+          # Fetch main branch for comparison
+          git fetch origin main:main || git fetch origin main || echo "Could not fetch main branch"
+          
           # Get commits that are in release branch but not in main
-          COMMITS=$(git log main..${{ steps.version.outputs.branch }} --oneline --no-merges | head -20)
+          COMMITS=$(git log main..${{ steps.version.outputs.branch }} --oneline --no-merges | head -20 2>/dev/null || echo "No commits found")
           
           # Format for PR body
           if [ -n "$COMMITS" ]; then
@@ -96,14 +129,14 @@ jobs:
         run: |
           PR_RESPONSE=$(curl -s -X POST \
             -H "Authorization: token ${{ secrets.RUNNER_TOKEN }}" \
-            -H "Accept: application/vnd.github.v3+json" \
-            "${{ github.api_url }}/repos/${{ github.repository }}/pulls" \
+            -H "Accept: application/json" \
+            -H "Content-Type: application/json" \
+            "${{ github.server_url }}/api/v1/repos/${{ github.repository }}/pulls" \
             -d '{
               "title": "Release ${{ steps.version.outputs.version }} → Main",
               "head": "${{ steps.version.outputs.branch }}",
               "base": "main",
-              "body": "${{ steps.commits.outputs.body }}",
-              "draft": false
+              "body": "${{ steps.commits.outputs.body }}"
             }')
           
           PR_NUMBER=$(echo "$PR_RESPONSE" | jq -r '.number')
@@ -124,27 +157,11 @@ jobs:
         run: |
           curl -s -X POST \
             -H "Authorization: token ${{ secrets.RUNNER_TOKEN }}" \
-            -H "Accept: application/vnd.github.v3+json" \
-            "${{ github.api_url }}/repos/${{ github.repository }}/issues/${{ steps.create_pr.outputs.number }}/labels" \
+            -H "Accept: application/json" \
+            -H "Content-Type: application/json" \
+            "${{ github.server_url }}/api/v1/repos/${{ github.repository }}/issues/${{ steps.create_pr.outputs.number }}/labels" \
             -d '{"labels": ["release", "gitflow"]}'
           echo "Added release labels to PR #${{ steps.create_pr.outputs.number }}"
-      
-      - name: Enable auto-merge
-        if: |
-          steps.check_pr.outputs.exists == 'false' && 
-          steps.create_pr.outputs.number && 
-          (inputs.auto_merge == true || github.event_name == 'push')
-        run: |
-          curl -s -X PUT \
-            -H "Authorization: token ${{ secrets.RUNNER_TOKEN }}" \
-            -H "Accept: application/vnd.github.v3+json" \
-            "${{ github.api_url }}/repos/${{ github.repository }}/pulls/${{ steps.create_pr.outputs.number }}/merge" \
-            -d '{
-              "merge_method": "merge",
-              "commit_title": "Release ${{ steps.version.outputs.version }}",
-              "commit_message": "Merge release/${{ steps.version.outputs.version }} into main via GitFlow"
-            }'
-          echo "Enabled auto-merge for PR #${{ steps.create_pr.outputs.number }}"
       
       - name: Summary
         run: |

@@ -25,7 +25,9 @@ env:
 jobs:
   build-and-publish:
     name: Build and Publish Release Images
-    runs-on: ubuntu-latest
+    runs-on: 
+      - ubuntu-latest
+      - docker
     
     strategy:
       matrix:
@@ -33,7 +35,7 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: https://github.com/actions/checkout@v4
         with:
           fetch-depth: 0
       
@@ -58,20 +60,20 @@ jobs:
           echo "Detected version: $VERSION (clean: $CLEAN_VERSION)"
       
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: https://github.com/docker/setup-buildx-action@v3
       
       - name: Log in to Forgejo Container Registry
-        uses: docker/login-action@v3
+        uses: https://github.com/docker/login-action@v3
         with:
-          registry: ${{ gitea.server_url }}
-          username: ${{ gitea.actor }}
+          registry: ${{ github.server_url }}
+          username: ${{ github.actor }}
           password: ${{ secrets.RUNNER_TOKEN }}
       
       - name: Prepare image tags
         id: tags
         run: |
-          REGISTRY="${{ gitea.server_url }}"
-          REPO="${{ gitea.repository }}"
+          REGISTRY="${{ github.server_url }}"
+          REPO="${{ github.repository }}"
           SERVICE="${{ matrix.service }}"
           VERSION="${{ steps.version.outputs.version }}"
           CLEAN_VERSION="${{ steps.version.outputs.clean_version }}"
@@ -99,7 +101,7 @@ jobs:
           echo "Built tags: $TAGS"
       
       - name: Build and push ${{ matrix.service }} release image
-        uses: docker/build-push-action@v5
+        uses: https://github.com/docker/build-push-action@v5
         with:
           context: .
           file: src/AspireDeezNuts.${{ matrix.service == 'api' && 'ApiService' || 'Web' }}/Dockerfile
@@ -138,7 +140,7 @@ jobs:
           for tag in "${TAG_ARRAY[@]}"; do
             echo "- \`$tag\`" >> $GITHUB_STEP_SUMMARY
           done
-          echo "**Registry**: ${{ gitea.server_url }}/${{ gitea.repository }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Registry**: ${{ github.server_url }}/${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
   
   create-deployment-manifests:
     name: Create Deployment Manifests
@@ -148,7 +150,7 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: https://github.com/actions/checkout@v4
       
       - name: Extract version
         id: version
@@ -167,8 +169,8 @@ jobs:
       - name: Update Kubernetes manifests
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          REGISTRY="${{ gitea.server_url }}"
-          REPO="${{ gitea.repository }}"
+          REGISTRY="${{ github.server_url }}"
+          REPO="${{ github.repository }}"
           
           # Update API service image
           sed -i "s|image: .*aspire-deez-nuts-api:.*|image: ${REGISTRY}/${REPO}/aspire-deez-nuts-api:${VERSION}|g" manifests/api-service.yaml
@@ -204,7 +206,7 @@ jobs:
           chmod +x deployment-${{ steps.version.outputs.version }}/deploy.sh
       
       - name: Upload deployment artifacts
-        uses: actions/upload-artifact@v4
+        uses: https://github.com/actions/upload-artifact@v4
         with:
           name: deployment-manifests-${{ steps.version.outputs.version }}
           path: deployment-${{ steps.version.outputs.version }}/
@@ -217,5 +219,5 @@ jobs:
           echo "Deployment manifests have been updated and are available as artifacts." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Images Published:" >> $GITHUB_STEP_SUMMARY
-          echo "- \`${{ gitea.server_url }}/${{ gitea.repository }}/aspire-deez-nuts-api:${{ steps.version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- \`${{ gitea.server_url }}/${{ gitea.repository }}/aspire-deez-nuts-web:${{ steps.version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ github.server_url }}/${{ github.repository }}/aspire-deez-nuts-api:${{ steps.version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ github.server_url }}/${{ github.repository }}/aspire-deez-nuts-web:${{ steps.version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
