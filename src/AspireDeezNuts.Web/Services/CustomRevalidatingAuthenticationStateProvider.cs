@@ -615,7 +615,7 @@ public class CustomRevalidatingAuthenticationStateProvider(
             
             if (!_tokenUsageAttempts.TryGetValue(key, out var attempts))
             {
-                attempts = new List<DateTime>();
+                attempts = [];
                 _tokenUsageAttempts[key] = attempts;
             }
             

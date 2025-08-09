@@ -10,6 +10,7 @@
     <Project Path="src/AspireDeezNuts.ServiceDefaults/AspireDeezNuts.ServiceDefaults.csproj" />
     <Project Path="src/AspireDeezNuts.Shared/AspireDeezNuts.Shared.csproj" />
     <Project Path="src/AspireDeezNuts.Web/AspireDeezNuts.Web.csproj" />
+    <Project Path="tests/AspireDeezNuts.Web.Tests/AspireDeezNuts.Web.Tests.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/AspireDeezNuts.ApiService.Tests/AspireDeezNuts.ApiService.Tests.csproj" />

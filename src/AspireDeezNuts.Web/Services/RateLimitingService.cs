@@ -192,7 +192,7 @@ public class RateLimitingService : IRateLimitingService, IDisposable
 
     private class OperationHistory
     {
-        public List<DateTime> Attempts { get; } = new();
+        public List<DateTime> Attempts { get; } = [];
         public object Lock { get; } = new();
     }
 }
