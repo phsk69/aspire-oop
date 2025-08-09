@@ -2,7 +2,72 @@
 
 ## Immediate
 
-- [ ] Migrate nav to the classical left nav stuff instead
+- [ ] Pagination on the API, with a central "chopper" setup, as we want to be able to fetch chunks in a good way
+
+### Blazor Frontend Testing (Priority: Critical)
+
+#### Phase 1: Test Project Setup & Core Services
+
+- [x] Create `tests/AspireDeezNuts.Web.Tests/` project structure
+- [x] Add bUnit, MSTest, and Microsoft.AspNetCore.Mvc.Testing packages
+- [x] Configure project references to Web and Shared projects
+
+#### Phase 2: Authentication Services Testing (Critical)
+
+- [x] **AuthService Tests**
+  - [x] Test LoginAsync with success/failure scenarios
+  - [x] Test LogoutAsync with token revocation
+  - [x] Test GetTokenAsync with cached/non-cached tokens
+  - [x] Test RefreshTokenAsync with valid/invalid tokens
+  - [x] Mock HttpClient, IHttpContextAccessor, and dependencies
+
+- [x] **CustomAuthenticationStateProvider Tests**
+  - [x] Test GetAuthenticationStateAsync with/without tokens
+  - [x] Test NotifyUserAuthenticationAsync
+  - [x] Test NotifyUserLogoutAsync
+  - [x] Test JWT token parsing
+
+- [x] **AuthorizedHttpMessageHandler Tests**
+  - [x] Test Bearer token injection
+  - [x] Test behavior with authenticated/unauthenticated users
+  - [x] Test missing token scenarios
+
+#### Phase 3: Core Components Testing (High Priority)
+
+- [x] **Login Component Tests**
+  - [x] Test form rendering
+  - [x] Test error message display from query parameters
+  - [x] Test navigation and toast notifications
+
+- [ ] **Posts Component Tests**
+  - [ ] Test loading state
+  - [ ] Test successful data fetch
+  - [ ] Test retry logic on failure
+  - [ ] Test pagination functionality
+  - [ ] Test modal display for post details
+
+- [ ] **UserAdmin Component Tests**
+  - [ ] Test user grid rendering
+  - [ ] Test CRUD operations (Create, Edit, Delete)
+  - [ ] Test role toggling
+  - [ ] Test authorization (Admin role requirement)
+
+#### Phase 4: Shared Components Testing
+
+- [ ] **LoginDisplay Component Tests**
+- [ ] **ToastContainer Component Tests**
+- [ ] **CreateUserModal Component Tests**
+
+#### Phase 5: Supporting Services Testing
+
+- [ ] **ToastService Tests**
+- [ ] **JsonSerializationService Tests**
+- [ ] **TokenInfoService Tests**
+
+#### Phase 6: Integration Testing
+
+- [ ] **End-to-End Authentication Flow Tests**
+- [ ] **Protected Routes Tests**
 
 ## Design Patterns Implementation (GoF Book)
 

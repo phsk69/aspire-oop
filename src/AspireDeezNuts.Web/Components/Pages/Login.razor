@@ -51,9 +51,14 @@
         var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
         var error = query["error"];
         
-        if (!string.IsNullOrEmpty(error))
+        if (!string.IsNullOrWhiteSpace(error))
         {
-            ToastService.ShowError(error, "Login Failed");
+            // Handle multiple error parameters - take only the first one
+            var firstError = error.Split(',')[0].Trim();
+            if (!string.IsNullOrWhiteSpace(firstError))
+            {
+                ToastService.ShowError(firstError, "Login Failed");
+            }
         }
     }
 }

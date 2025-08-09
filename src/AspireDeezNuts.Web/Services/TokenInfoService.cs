@@ -77,12 +77,12 @@ public class TokenInfo
 {
     public string? UserEmail { get; set; }
     public string? UserId { get; set; }
-    public List<string> Roles { get; set; } = new();
+    public List<string> Roles { get; set; } = [];
     public DateTime IssuedAt { get; set; }
     public DateTime ExpiresAt { get; set; }
     public string? Issuer { get; set; }
     public string? Audience { get; set; }
-    public Dictionary<string, string> Claims { get; set; } = new();
+    public Dictionary<string, string> Claims { get; set; } = [];
 
     public bool IsExpired => DateTime.UtcNow >= ExpiresAt;
     public TimeSpan TimeUntilExpiry => ExpiresAt - DateTime.UtcNow > TimeSpan.Zero 
