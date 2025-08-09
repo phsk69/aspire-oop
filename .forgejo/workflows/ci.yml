@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - 'release/*'
+      - develop
 
 env:
   DOTNET_VERSION: '9.0.x'
@@ -21,6 +21,11 @@ jobs:
         uses: https://github.com/actions/checkout@v4
         with:
           fetch-depth: 0
+      
+      - name: Generate secrets files for testing
+        run: |
+          cp src/AspireDeezNuts.ApiService/appsettings.Development.secrets.template.json src/AspireDeezNuts.ApiService/appsettings.Development.secrets.json
+          cp tests/AspireDeezNuts.ApiService.Tests/appsettings.Development.secrets.template.json tests/AspireDeezNuts.ApiService.Tests/appsettings.Development.secrets.json
       
       - name: Setup .NET
         uses: https://github.com/actions/setup-dotnet@v4
@@ -65,7 +70,7 @@ jobs:
       - ubuntu-latest
       - docker
     needs: test
-    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
     
     strategy:
       matrix:
@@ -94,6 +99,7 @@ jobs:
             type=ref,event=branch
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=develop,enable=${{ github.ref == 'refs/heads/develop' }}
             type=raw,value={{branch}}-{{date 'YYYYMMDD-HHmmss'}}
       
       - name: Build and push ${{ matrix.service }} image
