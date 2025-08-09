@@ -25,7 +25,9 @@ env:
 jobs:
   build-and-publish:
     name: Build and Publish Release Images
-    runs-on: [ubuntu-24.04, docker]
+    runs-on: 
+      - ubuntu-24.04
+      - docker
     
     strategy:
       matrix:
@@ -63,15 +65,15 @@ jobs:
       - name: Log in to Forgejo Container Registry
         uses: https://github.com/docker/login-action@v3
         with:
-          registry: ${{ gitea.server_url }}
-          username: ${{ gitea.actor }}
+          registry: ${{ github.server_url }}
+          username: ${{ github.actor }}
           password: ${{ secrets.RUNNER_TOKEN }}
       
       - name: Prepare image tags
         id: tags
         run: |
-          REGISTRY="${{ gitea.server_url }}"
-          REPO="${{ gitea.repository }}"
+          REGISTRY="${{ github.server_url }}"
+          REPO="${{ github.repository }}"
           SERVICE="${{ matrix.service }}"
           VERSION="${{ steps.version.outputs.version }}"
           CLEAN_VERSION="${{ steps.version.outputs.clean_version }}"
@@ -138,11 +140,12 @@ jobs:
           for tag in "${TAG_ARRAY[@]}"; do
             echo "- \`$tag\`" >> $GITHUB_STEP_SUMMARY
           done
-          echo "**Registry**: ${{ gitea.server_url }}/${{ gitea.repository }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Registry**: ${{ github.server_url }}/${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
   
   create-deployment-manifests:
     name: Create Deployment Manifests
-    runs-on: [ubuntu-24.04]
+    runs-on: 
+      - ubuntu-24.04
     needs: build-and-publish
     if: github.event_name == 'release' || github.event_name == 'push'
     
@@ -167,8 +170,8 @@ jobs:
       - name: Update Kubernetes manifests
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          REGISTRY="${{ gitea.server_url }}"
-          REPO="${{ gitea.repository }}"
+          REGISTRY="${{ github.server_url }}"
+          REPO="${{ github.repository }}"
           
           # Update API service image
           sed -i "s|image: .*aspire-deez-nuts-api:.*|image: ${REGISTRY}/${REPO}/aspire-deez-nuts-api:${VERSION}|g" manifests/api-service.yaml
@@ -217,5 +220,5 @@ jobs:
           echo "Deployment manifests have been updated and are available as artifacts." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Images Published:" >> $GITHUB_STEP_SUMMARY
-          echo "- \`${{ gitea.server_url }}/${{ gitea.repository }}/aspire-deez-nuts-api:${{ steps.version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- \`${{ gitea.server_url }}/${{ gitea.repository }}/aspire-deez-nuts-web:${{ steps.version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ github.server_url }}/${{ github.repository }}/aspire-deez-nuts-api:${{ steps.version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ github.server_url }}/${{ github.repository }}/aspire-deez-nuts-web:${{ steps.version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY

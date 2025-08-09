@@ -4,9 +4,7 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
+      - develop
 
 env:
   DOTNET_VERSION: '9.0.x'
@@ -16,13 +14,24 @@ env:
 jobs:
   test:
     name: Run Tests
-    runs-on: [ubuntu-24.04]
+    runs-on: 
+      - ubuntu-24.04
     
     steps:
       - name: Checkout code
         uses: https://github.com/actions/checkout@v4
         with:
           fetch-depth: 0
+      
+      - name: Generate secrets files for testing
+        run: |
+          cp src/AspireDeezNuts.ApiService/appsettings.Development.secrets.template.json src/AspireDeezNuts.ApiService/appsettings.Development.secrets.json
+          cp tests/AspireDeezNuts.ApiService.Tests/appsettings.Development.secrets.template.json tests/AspireDeezNuts.ApiService.Tests/appsettings.Development.secrets.json
+      
+      - name: Setup .NET
+        uses: https://github.com/actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
       
       - name: Cache NuGet packages
         uses: https://github.com/actions/cache@v4
@@ -45,22 +54,14 @@ jobs:
       
       - name: Run tests
         run: make test
-      
-      - name: Upload test results
-        uses: https://github.com/actions/upload-artifact@v4
-        if: always()
-        with:
-          name: test-results-${{ github.run_number }}
-          path: |
-            tests/**/TestResults/**/*.trx
-            tests/**/TestResults/**/*.xml
-          retention-days: 30
   
   build-containers:
     name: Build Container Images
-    runs-on: [ubuntu-24.04, docker]
+    runs-on: 
+      - ubuntu-24.04
+      - docker
     needs: test
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
     
     strategy:
       matrix:
@@ -76,19 +77,20 @@ jobs:
       - name: Log in to Forgejo Container Registry
         uses: https://github.com/docker/login-action@v3
         with:
-          registry: ${{ gitea.server_url }}
-          username: ${{ gitea.actor }}
+          registry: ${{ github.server_url }}
+          username: ${{ github.actor }}
           password: ${{ secrets.RUNNER_TOKEN }}
       
       - name: Extract metadata
         id: meta
         uses: https://github.com/docker/metadata-action@v5
         with:
-          images: ${{ gitea.server_url }}/${{ gitea.repository }}/aspire-deez-nuts-${{ matrix.service }}
+          images: ${{ github.server_url }}/${{ github.repository }}/aspire-deez-nuts-${{ matrix.service }}
           tags: |
             type=ref,event=branch
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=develop,enable=${{ github.ref == 'refs/heads/develop' }}
             type=raw,value={{branch}}-{{date 'YYYYMMDD-HHmmss'}}
       
       - name: Build and push ${{ matrix.service }} image
@@ -106,7 +108,8 @@ jobs:
 
   quality-gate:
     name: Quality Gate
-    runs-on: [ubuntu-24.04]
+    runs-on: 
+      - ubuntu-24.04
     needs: [test, build-containers]
     if: always()
     
