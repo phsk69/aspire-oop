@@ -80,7 +80,7 @@ public class AuthServiceTests
         Assert.IsNull(result.ErrorMessage);
         
         // Verify HTTP call was made
-        Assert.AreEqual(1, _httpMessageHandler.Requests.Count);
+        Assert.HasCount(1, _httpMessageHandler.Requests);
         var request = _httpMessageHandler.Requests[0];
         Assert.AreEqual("/api/v1/auth/login", request.RequestUri?.PathAndQuery);
         Assert.AreEqual(HttpMethod.Post, request.Method);
@@ -199,7 +199,7 @@ public class AuthServiceTests
         await _authService.LogoutAsync();
 
         // Assert
-        Assert.AreEqual(1, _httpMessageHandler.Requests.Count);
+        Assert.HasCount(1, _httpMessageHandler.Requests);
         var request = _httpMessageHandler.Requests[0];
         Assert.AreEqual("/api/v1/auth/logout", request.RequestUri?.PathAndQuery);
         Assert.AreEqual(HttpMethod.Post, request.Method);
@@ -285,6 +285,6 @@ public class AuthServiceTests
         Assert.IsNull(newToken);
         
         // Verify no HTTP calls were made
-        Assert.AreEqual(0, _httpMessageHandler.Requests.Count);
+        Assert.IsEmpty(_httpMessageHandler.Requests);
     }
 }

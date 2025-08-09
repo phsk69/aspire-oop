@@ -517,7 +517,7 @@ public class AuthControllerTests
         var content = await response.Content.ReadFromJsonAsync<LoginResponse>(TestContext.CancellationTokenSource.Token);
         Assert.IsNotNull(content?.AccessToken);
         Assert.IsNotNull(content?.RefreshToken);
-        Assert.IsTrue(content.ExpiresIn > 0);
+        Assert.IsGreaterThan(0, content.ExpiresIn);
     }
 
     [TestMethod]
@@ -596,7 +596,7 @@ public class AuthControllerTests
         var content = await response.Content.ReadFromJsonAsync<LoginResponse>(TestContext.CancellationTokenSource.Token);
         Assert.IsNotNull(content?.AccessToken);
         Assert.IsNotNull(content?.RefreshToken);
-        Assert.IsTrue(content.ExpiresIn > 0);
+        Assert.IsGreaterThan(0, content.ExpiresIn);
         
         // Verify the new token is different from the original
         Assert.AreNotEqual(_adminToken, content.AccessToken);

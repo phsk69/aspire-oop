@@ -39,12 +39,15 @@
   - [x] Test error message display from query parameters
   - [x] Test navigation and toast notifications
 
-- [ ] **Posts Component Tests**
-  - [ ] Test loading state
-  - [ ] Test successful data fetch
-  - [ ] Test retry logic on failure
-  - [ ] Test pagination functionality
-  - [ ] Test modal display for post details
+- [x] **Posts Component Tests**
+  - [x] Test loading state
+  - [x] Test successful data fetch
+  - [x] Test retry logic on failure
+  - [x] Test pagination functionality
+  - [x] Test modal structure and trigger buttons (BlazorBootstrap Modal requires JS interop)
+  - [x] Test content truncation and Read More button functionality
+  - [x] Test empty response handling
+  - [x] Test authorization requirements
 
 - [ ] **UserAdmin Component Tests**
   - [ ] Test user grid rendering

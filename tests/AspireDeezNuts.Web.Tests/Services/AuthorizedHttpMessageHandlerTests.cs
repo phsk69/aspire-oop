@@ -26,9 +26,11 @@ public class AuthorizedHttpMessageHandlerTests
         {
             InnerHandler = _innerHandler
         };
-        
-        _httpClient = new HttpClient(_handler);
-        _httpClient.BaseAddress = new Uri("https://test-api/");
+
+        _httpClient = new HttpClient(_handler)
+        {
+            BaseAddress = new Uri("https://test-api/")
+        };
     }
 
     [TestCleanup]
@@ -53,11 +55,11 @@ public class AuthorizedHttpMessageHandlerTests
         _innerHandler.SetupResponse("/api/test", HttpStatusCode.OK, new { message = "success" });
 
         // Act
-        var response = await _httpClient.GetAsync("/api/test");
+        var response = await _httpClient.GetAsync("/api/test", TestContext.CancellationTokenSource.Token);
 
         // Assert
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-        Assert.AreEqual(1, _innerHandler.Requests.Count);
+        Assert.HasCount(1, _innerHandler.Requests);
         
         var request = _innerHandler.Requests[0];
         Assert.IsNotNull(request.Headers.Authorization);
@@ -79,11 +81,11 @@ public class AuthorizedHttpMessageHandlerTests
         _innerHandler.SetupResponse("/api/test", HttpStatusCode.OK, new { message = "success" });
 
         // Act
-        var response = await _httpClient.GetAsync("/api/test");
+        var response = await _httpClient.GetAsync("/api/test", TestContext.CancellationTokenSource.Token);
 
         // Assert
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-        Assert.AreEqual(1, _innerHandler.Requests.Count);
+        Assert.HasCount(1, _innerHandler.Requests);
         
         var request = _innerHandler.Requests[0];
         Assert.IsNull(request.Headers.Authorization);
@@ -97,11 +99,11 @@ public class AuthorizedHttpMessageHandlerTests
         _innerHandler.SetupResponse("/api/test", HttpStatusCode.OK, new { message = "success" });
 
         // Act
-        var response = await _httpClient.GetAsync("/api/test");
+        var response = await _httpClient.GetAsync("/api/test", TestContext.CancellationTokenSource.Token);
 
         // Assert
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-        Assert.AreEqual(1, _innerHandler.Requests.Count);
+        Assert.HasCount(1, _innerHandler.Requests);
         
         var request = _innerHandler.Requests[0];
         Assert.IsNull(request.Headers.Authorization);
@@ -115,11 +117,11 @@ public class AuthorizedHttpMessageHandlerTests
         _innerHandler.SetupResponse("/api/test", HttpStatusCode.OK, new { message = "success" });
 
         // Act
-        var response = await _httpClient.GetAsync("/api/test");
+        var response = await _httpClient.GetAsync("/api/test", TestContext.CancellationTokenSource.Token);
 
         // Assert
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-        Assert.AreEqual(1, _innerHandler.Requests.Count);
+        Assert.HasCount(1, _innerHandler.Requests);
         
         var request = _innerHandler.Requests[0];
         Assert.IsNull(request.Headers.Authorization);
@@ -139,7 +141,7 @@ public class AuthorizedHttpMessageHandlerTests
         _innerHandler.SetupResponse("/api/test", HttpStatusCode.OK);
 
         // Act
-        await _httpClient.GetAsync("/api/test");
+        await _httpClient.GetAsync("/api/test", TestContext.CancellationTokenSource.Token);
 
         // Assert
         var infoLogs = _logger.LogEntries.Where(l => l.LogLevel == LogLevel.Information).ToList();
@@ -174,7 +176,7 @@ public class AuthorizedHttpMessageHandlerTests
         _innerHandler.SetupResponse("/api/test", HttpStatusCode.OK);
 
         // Act
-        await _httpClient.GetAsync("/api/test");
+        await _httpClient.GetAsync("/api/test", TestContext.CancellationTokenSource.Token);
 
         // Assert
         var warningLogs = _logger.LogEntries.Where(l => l.LogLevel == LogLevel.Warning).ToList();
@@ -195,7 +197,7 @@ public class AuthorizedHttpMessageHandlerTests
         _innerHandler.SetupResponse("/api/test", HttpStatusCode.OK);
 
         // Act
-        var response = await _httpClient.GetAsync("/api/test");
+        var response = await _httpClient.GetAsync("/api/test", TestContext.CancellationTokenSource.Token);
 
         // Assert
         var request = _innerHandler.Requests[0];
@@ -221,7 +223,7 @@ public class AuthorizedHttpMessageHandlerTests
         _innerHandler.SetupResponse("/api/test", HttpStatusCode.OK);
 
         // Act
-        var response = await _httpClient.GetAsync("/api/test");
+        var response = await _httpClient.GetAsync("/api/test", TestContext.CancellationTokenSource.Token);
 
         // Assert
         var request = _innerHandler.Requests[0];
@@ -251,7 +253,7 @@ public class AuthorizedHttpMessageHandlerTests
         var request = new HttpRequestMessage(HttpMethod.Get, "/api/test");
         request.Headers.Authorization = new AuthenticationHeaderValue("Basic", "existing-auth");
         
-        var response = await _httpClient.SendAsync(request);
+        var response = await _httpClient.SendAsync(request, TestContext.CancellationTokenSource.Token);
 
         // Assert
         var actualRequest = _innerHandler.Requests[0];
@@ -274,7 +276,7 @@ public class AuthorizedHttpMessageHandlerTests
         _innerHandler.SetupResponse("/api/test", HttpStatusCode.NotFound);
 
         // Act
-        var response = await _httpClient.GetAsync("/api/test");
+        var response = await _httpClient.GetAsync("/api/test", TestContext.CancellationTokenSource.Token);
 
         // Assert
         Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode);
@@ -283,4 +285,6 @@ public class AuthorizedHttpMessageHandlerTests
         var infoLogs = _logger.LogEntries.Where(l => l.LogLevel == LogLevel.Information).ToList();
         Assert.IsTrue(infoLogs.Any(l => l.Message.Contains("Response status: NotFound")));
     }
+
+    public TestContext TestContext { get; set; }
 }

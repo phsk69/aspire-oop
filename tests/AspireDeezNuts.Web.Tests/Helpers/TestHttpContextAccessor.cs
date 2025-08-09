@@ -34,21 +34,25 @@ public class TestHttpContextAccessor : IHttpContextAccessor
         var identity = new ClaimsIdentity(claims, "Test");
         var principal = new ClaimsPrincipal(identity);
 
-        var context = new DefaultHttpContext();
-        context.User = principal;
-        context.Items = new TestItemsDictionary();
-        
+        var context = new DefaultHttpContext
+        {
+            User = principal,
+            Items = new TestItemsDictionary()
+        };
+
         HttpContext = context;
     }
 
     public void SetAnonymousUser()
     {
-        var context = new DefaultHttpContext();
-        context.User = new ClaimsPrincipal(new ClaimsIdentity());
-        
-        // Use a custom dictionary that returns null instead of throwing for missing keys
-        context.Items = new TestItemsDictionary();
-        
+        var context = new DefaultHttpContext
+        {
+            User = new ClaimsPrincipal(new ClaimsIdentity()),
+
+            // Use a custom dictionary that returns null instead of throwing for missing keys
+            Items = new TestItemsDictionary()
+        };
+
         HttpContext = context;
     }
 }

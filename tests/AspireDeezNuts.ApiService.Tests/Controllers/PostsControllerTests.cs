@@ -98,7 +98,7 @@ public class PostsControllerTests
         var adminPassword = config["SeedData:InitialAdmin:Password"];
 
         var loginRequest = new { Email = adminEmail, Password = adminPassword };
-        var response = await _client!.PostAsJsonAsync("/api/v1/auth/login", loginRequest);
+        var response = await _client!.PostAsJsonAsync("/api/v1/auth/login", loginRequest, TestContext.CancellationTokenSource.Token);
         
         Assert.IsTrue(response.IsSuccessStatusCode, $"Authentication failed: {response.StatusCode}");
         

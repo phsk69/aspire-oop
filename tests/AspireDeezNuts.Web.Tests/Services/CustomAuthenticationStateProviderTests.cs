@@ -117,7 +117,7 @@ public class CustomAuthenticationStateProviderTests
         
         // Verify error was logged
         var errorLogs = _logger.LogEntries.Where(l => l.LogLevel == LogLevel.Error).ToList();
-        Assert.IsTrue(errorLogs.Count > 0);
+        Assert.IsGreaterThan(0, errorLogs.Count);
         Assert.IsTrue(errorLogs.Any(l => l.Message.Contains("Error getting authentication state")));
     }
 
@@ -139,7 +139,7 @@ public class CustomAuthenticationStateProviderTests
         await _provider.NotifyUserAuthenticationAsync(token);
 
         // Wait a bit for the event to process
-        await Task.Delay(10);
+        await Task.Delay(10, TestContext.CancellationTokenSource.Token);
 
         // Assert
         Assert.IsTrue(stateChanged);
@@ -165,7 +165,7 @@ public class CustomAuthenticationStateProviderTests
         await _provider.NotifyUserAuthenticationAsync(null);
 
         // Wait a bit for the event to process
-        await Task.Delay(10);
+        await Task.Delay(10, TestContext.CancellationTokenSource.Token);
 
         // Assert
         Assert.IsTrue(stateChanged);
@@ -190,7 +190,7 @@ public class CustomAuthenticationStateProviderTests
         await _provider.NotifyUserLogoutAsync();
 
         // Wait a bit for the event to process
-        await Task.Delay(10);
+        await Task.Delay(10, TestContext.CancellationTokenSource.Token);
 
         // Assert
         Assert.IsTrue(stateChanged);
@@ -209,7 +209,7 @@ public class CustomAuthenticationStateProviderTests
 
         // Assert
         var infoLogs = _logger.LogEntries.Where(l => l.LogLevel == LogLevel.Information).ToList();
-        Assert.IsTrue(infoLogs.Count > 0);
+        Assert.IsGreaterThan(0, infoLogs.Count);
         Assert.IsTrue(infoLogs.Any(l => l.Message.Contains("test@example.com") || l.Message.Contains("Unknown")));
     }
 
@@ -221,7 +221,7 @@ public class CustomAuthenticationStateProviderTests
 
         // Assert
         var infoLogs = _logger.LogEntries.Where(l => l.LogLevel == LogLevel.Information).ToList();
-        Assert.IsTrue(infoLogs.Count > 0);
+        Assert.IsGreaterThan(0, infoLogs.Count);
         Assert.IsTrue(infoLogs.Any(l => l.Message.Contains("logout") || l.Message.Contains("anonymous")));
     }
 
@@ -238,14 +238,14 @@ public class CustomAuthenticationStateProviderTests
 
         // Assert
         var claimsList = claims.ToList();
-        Assert.IsTrue(claimsList.Count > 0);
+        Assert.IsGreaterThan(0, claimsList.Count);
         
         var emailClaim = claimsList.FirstOrDefault(c => c.Type == "email" || c.Type == ClaimTypes.Email);
         Assert.IsNotNull(emailClaim);
         Assert.AreEqual("test@example.com", emailClaim.Value);
         
         var roleClaims = claimsList.Where(c => c.Type == "role" || c.Type == ClaimTypes.Role).ToList();
-        Assert.IsTrue(roleClaims.Count >= 2);
+        Assert.IsGreaterThanOrEqualTo(2, roleClaims.Count);
         Assert.IsTrue(roleClaims.Any(c => c.Value == "Admin"));
         Assert.IsTrue(roleClaims.Any(c => c.Value == "User"));
     }
@@ -280,4 +280,6 @@ public class CustomAuthenticationStateProviderTests
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
+
+    public TestContext TestContext { get; set; }
 }

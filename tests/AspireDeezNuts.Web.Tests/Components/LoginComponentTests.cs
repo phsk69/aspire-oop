@@ -50,10 +50,10 @@ public class LoginComponentTests : Bunit.TestContext
     public void Login_WithoutErrorParameter_DoesNotShowToast()
     {
         // Act
-        var component = RenderComponent<Login>();
+        var _ = RenderComponent<Login>();
 
         // Assert
-        Assert.AreEqual(0, _toastService.ToastMessages.Count);
+        Assert.IsEmpty(_toastService.ToastMessages);
     }
 
     [TestMethod]
@@ -63,10 +63,10 @@ public class LoginComponentTests : Bunit.TestContext
         Services.GetRequiredService<FakeNavigationManager>().NavigateTo("/login?error=Invalid%20credentials");
 
         // Act
-        var component = RenderComponent<Login>();
+        var _ = RenderComponent<Login>();
 
         // Assert
-        Assert.AreEqual(1, _toastService.ToastMessages.Count);
+        Assert.HasCount(1, _toastService.ToastMessages);
         var toast = _toastService.ToastMessages[0];
         Assert.AreEqual("Invalid credentials", toast.Message);
         Assert.AreEqual("Login Failed", toast.Title);
@@ -80,10 +80,10 @@ public class LoginComponentTests : Bunit.TestContext
         Services.GetRequiredService<FakeNavigationManager>().NavigateTo("/login?error=First%20error&error=Second%20error");
 
         // Act
-        var component = RenderComponent<Login>();
+        _ = RenderComponent<Login>();
 
         // Assert
-        Assert.AreEqual(1, _toastService.ToastMessages.Count);
+        Assert.HasCount(1, _toastService.ToastMessages);
         var toast = _toastService.ToastMessages[0];
         Assert.AreEqual("First error", toast.Message);
     }
@@ -95,10 +95,10 @@ public class LoginComponentTests : Bunit.TestContext
         Services.GetRequiredService<FakeNavigationManager>().NavigateTo("/login?error=");
 
         // Act
-        var component = RenderComponent<Login>();
+        _ = RenderComponent<Login>();
 
         // Assert
-        Assert.AreEqual(0, _toastService.ToastMessages.Count);
+        Assert.IsEmpty(_toastService.ToastMessages);
     }
 
     [TestMethod]
@@ -108,10 +108,10 @@ public class LoginComponentTests : Bunit.TestContext
         Services.GetRequiredService<FakeNavigationManager>().NavigateTo("/login?error=%20%20%20");
 
         // Act
-        var component = RenderComponent<Login>();
+        _ = RenderComponent<Login>();
 
         // Assert
-        Assert.AreEqual(0, _toastService.ToastMessages.Count);
+        Assert.IsEmpty(_toastService.ToastMessages);
     }
 
     [TestMethod]
@@ -171,9 +171,9 @@ public class LoginComponentTests : Bunit.TestContext
         // Assert
         var devInfo = component.Find(".text-muted");
         Assert.IsNotNull(devInfo);
-        Assert.IsTrue(devInfo.TextContent.Contains("User info"));
-        Assert.IsTrue(devInfo.TextContent.Contains("DEV: src/AspireDeezNuts.ApiService/appsettings.Development.secrets.json"));
-        Assert.IsTrue(devInfo.TextContent.Contains("Kubernetes: aspire-admin-seed secret"));
+        Assert.Contains("User info", devInfo.TextContent);
+        Assert.Contains("DEV: src/AspireDeezNuts.ApiService/appsettings.Development.secrets.json", devInfo.TextContent);
+        Assert.Contains("Kubernetes: aspire-admin-seed secret", devInfo.TextContent);
     }
 
     [TestMethod]
@@ -199,10 +199,10 @@ public class LoginComponentTests : Bunit.TestContext
         Services.GetRequiredService<FakeNavigationManager>().NavigateTo($"/login?error={encodedError}");
 
         // Act
-        var component = RenderComponent<Login>();
+        _ = RenderComponent<Login>();
 
         // Assert
-        Assert.AreEqual(1, _toastService.ToastMessages.Count);
+        Assert.HasCount(1, _toastService.ToastMessages);
         var toast = _toastService.ToastMessages[0];
         Assert.AreEqual("Login failed: invalid username or password", toast.Message);
     }

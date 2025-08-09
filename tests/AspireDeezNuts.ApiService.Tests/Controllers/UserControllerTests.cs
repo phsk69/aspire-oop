@@ -113,7 +113,7 @@ public class UserControllerTests
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
         var users = await response.Content.ReadFromJsonAsync<UserDto[]>(TestContext.CancellationTokenSource.Token);
         Assert.IsNotNull(users);
-        Assert.IsTrue(users.Length > 0);
+        Assert.IsGreaterThan(0, users.Length);
         Assert.IsTrue(users.Any(u => u.Roles?.Contains("Admin") == true));
     }
 
