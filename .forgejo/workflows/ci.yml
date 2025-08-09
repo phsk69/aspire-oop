@@ -14,7 +14,8 @@ env:
 jobs:
   test:
     name: Run Tests
-    runs-on: ubuntu-latest
+    runs-on: 
+      - ubuntu-24.04
     
     steps:
       - name: Checkout code
@@ -67,7 +68,7 @@ jobs:
   build-containers:
     name: Build Container Images
     runs-on: 
-      - ubuntu-latest
+      - ubuntu-24.04
       - docker
     needs: test
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
@@ -117,7 +118,8 @@ jobs:
 
   quality-gate:
     name: Quality Gate
-    runs-on: ubuntu-latest
+    runs-on: 
+      - ubuntu-24.04
     needs: [test, build-containers]
     if: always()
     

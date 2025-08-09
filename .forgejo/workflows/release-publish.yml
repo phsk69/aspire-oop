@@ -26,7 +26,7 @@ jobs:
   build-and-publish:
     name: Build and Publish Release Images
     runs-on: 
-      - ubuntu-latest
+      - ubuntu-24.04
       - docker
     
     strategy:
@@ -144,7 +144,8 @@ jobs:
   
   create-deployment-manifests:
     name: Create Deployment Manifests
-    runs-on: ubuntu-latest
+    runs-on: 
+      - ubuntu-24.04
     needs: build-and-publish
     if: github.event_name == 'release' || github.event_name == 'push'
     
