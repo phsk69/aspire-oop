@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: aspire-dashboard
-          image: mcr.microsoft.com/dotnet/aspire-dashboard:9.0
+          image: mcr.microsoft.com/dotnet/aspire-dashboard:9.4
           ports:
             - containerPort: 18888
               name: frontend
@@ -39,6 +39,9 @@ spec:
             - name: tls-certs
               mountPath: /tls
               readOnly: true
+            - name: shared-certs
+              mountPath: /etc/ssl/certs
+              readOnly: true
           resources:
             requests:
               memory: "512Mi"
@@ -53,6 +56,8 @@ spec:
         - name: tls-certs
           secret:
             secretName: aspire-dashboard-tls
+        - name: shared-certs
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service

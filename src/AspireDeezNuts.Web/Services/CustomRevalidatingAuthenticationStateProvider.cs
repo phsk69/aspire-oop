@@ -7,7 +7,6 @@ using AspireDeezNuts.Shared.Models;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using System.Collections.Concurrent;
-using Microsoft.IdentityModel.Tokens;
 
 namespace AspireDeezNuts.Web.Services;
 

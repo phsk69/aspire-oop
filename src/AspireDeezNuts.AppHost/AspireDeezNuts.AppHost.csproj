@@ -16,6 +16,7 @@
   <ItemGroup>
     <ProjectReference Include="..\AspireDeezNuts.ApiService\AspireDeezNuts.ApiService.csproj" />
     <ProjectReference Include="..\AspireDeezNuts.Web\AspireDeezNuts.Web.csproj" />
+    <ProjectReference Include="..\AspireDeezNuts.FuzzTesting\AspireDeezNuts.FuzzTesting.csproj" />
   </ItemGroup>
 
 </Project>

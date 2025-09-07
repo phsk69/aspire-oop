@@ -20,4 +20,11 @@ if (isLocalDev)
     webService.WithHttpsEndpoint(port: 7071, name: "web-https");
 }
 
+// Configure Fuzz Testing service (only in local development)
+if (isLocalDev)
+{
+    builder.AddProject<Projects.AspireDeezNuts_FuzzTesting>("aspire-deez-nuts-fuzz")
+        .WithReference(apiService);
+}
+
 builder.Build().Run();

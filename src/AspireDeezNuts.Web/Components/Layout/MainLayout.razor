@@ -70,15 +70,41 @@
 <AspireDeezNuts.Web.Components.Shared.ToastContainer />
 
 @code {
+    private readonly Timer _debounceTimer;
+    private readonly object _debouneLock = new();
+    private volatile bool _pendingStateChange = false;
+
+    public MainLayout()
+    {
+        // Create a debounce timer to prevent excessive re-renders
+        _debounceTimer = new Timer(OnDebouncedStateChange, null, Timeout.Infinite, Timeout.Infinite);
+    }
+
     protected override void OnInitialized()
     {
         // Subscribe to authentication state changes to refresh the layout
         AuthenticationStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
     }
 
-    private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
+    private void OnAuthenticationStateChanged(Task<AuthenticationState> task)
     {
-        // Force the layout to re-render when authentication state changes
+        lock (_debouneLock)
+        {
+            _pendingStateChange = true;
+            // Debounce for 100ms to prevent rapid successive re-renders
+            _debounceTimer.Change(100, Timeout.Infinite);
+        }
+    }
+
+    private async void OnDebouncedStateChange(object? state)
+    {
+        lock (_debouneLock)
+        {
+            if (!_pendingStateChange) return;
+            _pendingStateChange = false;
+        }
+
+        // Force the layout to re-render when authentication state changes (debounced)
         await InvokeAsync(StateHasChanged);
     }
 
@@ -86,5 +112,6 @@
     {
         // Unsubscribe from authentication state changes to prevent memory leaks
         AuthenticationStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+        _debounceTimer?.Dispose();
     }
 }

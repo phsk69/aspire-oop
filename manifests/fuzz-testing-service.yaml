@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: aspire-deez-nuts-web
+  name: aspire-deez-nuts-fuzz
   labels:
-    app: aspire-deez-nuts-web
+    app: aspire-deez-nuts-fuzz
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: aspire-deez-nuts-web
+      app: aspire-deez-nuts-fuzz
   template:
     metadata:
       labels:
-        app: aspire-deez-nuts-web
+        app: aspire-deez-nuts-fuzz
     spec:
       initContainers:
         - name: setup-ca-certs
-          image: aspire-deez-nuts-web:latest
+          image: aspire-deez-nuts-fuzz:latest
           imagePullPolicy: IfNotPresent
           command: ["/bin/bash", "-c"]
           args:
@@ -34,8 +34,8 @@ spec:
             - name: shared-certs
               mountPath: /shared-certs
       containers:
-        - name: web
-          image: aspire-deez-nuts-web:latest
+        - name: fuzz-testing
+          image: aspire-deez-nuts-fuzz:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
@@ -58,12 +58,12 @@ spec:
             - secretRef:
                 name: aspire-these-nutz
             - configMapRef:
-                name: aspire-these-nutz-config
+                name: aspire-fuzz-config
           env:
             - name: OTEL_SERVICE_NAME
-              value: "aspire-deez-nuts-web"
+              value: "aspire-deez-nuts-fuzz"
           volumeMounts:
-            - name: web-storage
+            - name: fuzz-storage
               mountPath: /root/.aspnet/DataProtection-Keys
             - name: tls-certs
               mountPath: /tls
@@ -79,22 +79,22 @@ spec:
               memory: "512Mi"
               cpu: "500m"
       volumes:
-        - name: web-storage
+        - name: fuzz-storage
           persistentVolumeClaim:
-            claimName: aspire-web-data
+            claimName: aspire-fuzz-data
         - name: tls-certs
           secret:
-            secretName: aspire-web-tls
+            secretName: aspire-fuzz-tls
         - name: shared-certs
           emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: aspire-deez-nuts-web
+  name: aspire-deez-nuts-fuzz
 spec:
   selector:
-    app: aspire-deez-nuts-web
+    app: aspire-deez-nuts-fuzz
   ports:
     - port: 8080
       targetPort: 8080
@@ -102,4 +102,3 @@ spec:
     - port: 8443
       targetPort: 8443
       name: https
-  type: LoadBalancer

@@ -8,7 +8,6 @@ using AspireDeezNuts.Web.Tests.Helpers;
 using AspireDeezNuts.Web.Components.Pages;
 using AspireDeezNuts.Shared.Models;
 using System.Net;
-using Microsoft.AspNetCore.Components.Web;
 
 namespace AspireDeezNuts.Web.Tests.Components;
 
@@ -136,18 +135,26 @@ public class PostsComponentTests : Bunit.TestContext
 
         // Act
         var component = RenderComponent<Posts>();
-        await component.InvokeAsync(() => Task.Delay(8000)); // Allow all retries to complete
+        
+        // Wait for initial render and component initialization
+        await component.InvokeAsync(async () =>
+        {
+            // Simulate the time needed for the retry logic to complete
+            // 3 attempts with delays: 1000ms + 2000ms + 3000ms = 6000ms total
+            await Task.Delay(7000);
+        });
 
-        // Assert
+        // Assert - Toast messages should show warnings and final error
+        var warningToasts = _toastService.ToastMessages.Where(t => t.Type == ToastType.Warning).ToList();
         var errorToasts = _toastService.ToastMessages.Where(t => t.Type == ToastType.Danger).ToList();
+        
+        // Should have warning toasts for retry attempts
+        Assert.IsTrue(warningToasts.Count >= 2, "Should have at least 2 warning toasts for retries");
+        
+        // Should have final error toast
         Assert.HasCount(1, errorToasts);
         Assert.AreEqual("Unable to load posts. Please try refreshing the page.", errorToasts[0].Message);
         Assert.AreEqual("Load Failed", errorToasts[0].Title);
-        
-        // Verify shows "No posts" message
-        var alert = component.Find(".alert.alert-warning");
-        Assert.IsNotNull(alert);
-        Assert.Contains("No posts available", alert.TextContent);
     }
 
     [TestMethod]

@@ -12,3 +12,4 @@ resources:
   - dashboard.yaml
   - api-service.yaml
   - web-service.yaml
+  - fuzz-testing-service.yaml

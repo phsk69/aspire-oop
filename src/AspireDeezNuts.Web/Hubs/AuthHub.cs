@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 
 namespace AspireDeezNuts.Web.Hubs;

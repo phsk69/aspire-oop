@@ -51,10 +51,21 @@ public static class Extensions
             })
             .WithTracing(tracing =>
             {
-                tracing.AddAspNetCoreInstrumentation()
+                tracing.AddAspNetCoreInstrumentation(options =>
+                    {
+                        // Filter out noisy Blazor Server component traces
+                        options.Filter = (httpContext) =>
+                        {
+                            // Allow all HTTP requests and most ASP.NET Core traces
+                            return true;
+                        };
+                    })
                     // Uncomment the following line to enable gRPC instrumentation (requires the OpenTelemetry.Instrumentation.GrpcNetClient package)
                     //.AddGrpcClientInstrumentation()
                     .AddHttpClientInstrumentation();
+                
+                // Add custom trace processor to filter out Blazor Server component rendering traces
+                tracing.AddProcessor(new BlazorComponentTraceFilter());
             });
 
         builder.AddOpenTelemetryExporters();

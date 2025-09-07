@@ -14,6 +14,25 @@ spec:
       labels:
         app: aspire-deez-nuts-api
     spec:
+      initContainers:
+        - name: setup-ca-certs
+          image: aspire-deez-nuts-api:latest
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              if [ -f /tls/ca.crt ]; then
+                cp /tls/ca.crt /usr/local/share/ca-certificates/cert-manager-ca.crt
+                update-ca-certificates
+                echo "CA certificate installed and trusted"
+              fi
+              cp -r /etc/ssl/certs/* /shared-certs/
+          volumeMounts:
+            - name: tls-certs
+              mountPath: /tls
+              readOnly: true
+            - name: shared-certs
+              mountPath: /shared-certs
       containers:
         - name: api
           image: aspire-deez-nuts-api:latest
@@ -53,6 +72,9 @@ spec:
             - name: tls-certs
               mountPath: /tls
               readOnly: true
+            - name: shared-certs
+              mountPath: /etc/ssl/certs
+              readOnly: true
           resources:
             requests:
               memory: "256Mi"
@@ -67,6 +89,8 @@ spec:
         - name: tls-certs
           secret:
             secretName: aspire-api-tls
+        - name: shared-certs
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service

@@ -24,22 +24,48 @@
 </AuthorizeView>
 
 @code {
+    private readonly Timer _debounceTimer;
+    private readonly object _debouneLock = new();
+    private volatile bool _pendingStateChange = false;
+
+    public LoginDisplay()
+    {
+        // Create a debounce timer to prevent excessive re-renders
+        _debounceTimer = new Timer(OnDebouncedStateChange, null, Timeout.Infinite, Timeout.Infinite);
+    }
+
     protected override void OnInitialized()
     {
         // Subscribe to authentication state changes
         AuthenticationStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
     }
 
-    private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
+    private void OnAuthenticationStateChanged(Task<AuthenticationState> task)
     {
+        lock (_debouneLock)
+        {
+            _pendingStateChange = true;
+            // Debounce for 100ms to prevent rapid successive re-renders
+            _debounceTimer.Change(100, Timeout.Infinite);
+        }
+    }
+
+    private async void OnDebouncedStateChange(object? state)
+    {
+        lock (_debouneLock)
+        {
+            if (!_pendingStateChange) return;
+            _pendingStateChange = false;
+        }
+
         try
         {
-            var authState = await task;
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
             Logger.LogInformation("Authentication state changed - User authenticated: {IsAuthenticated}, User: {UserName}", 
                 authState.User?.Identity?.IsAuthenticated ?? false,
                 authState.User?.Identity?.Name ?? "Anonymous");
             
-            // Force UI update on the UI thread
+            // Force UI update on the UI thread (debounced)
             await InvokeAsync(StateHasChanged);
         }
         catch (Exception ex)
@@ -64,5 +90,6 @@
     {
         // Unsubscribe from authentication state changes to prevent memory leaks
         AuthenticationStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+        _debounceTimer?.Dispose();
     }
 }

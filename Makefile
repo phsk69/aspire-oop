@@ -1,4 +1,4 @@
-.PHONY: build run clean restore test dev web-dev docker-build-api docker-build-web docker-build k8s-generate k8s-deploy deploy k8s-status k8s-clean token format shell-api shell-web update-minor
+.PHONY: build run clean restore test dev web-dev docker-build-api docker-build-web docker-build-fuzz docker-build k8s-generate k8s-deploy deploy k8s-status k8s-clean token format shell-api shell-web shell-fuzz update-minor
 
 # Default target
 all: restore build
@@ -47,13 +47,19 @@ docker-build-web:
 	nerdctl build -t aspire-deez-nuts-web:latest -f src/AspireDeezNuts.Web/Dockerfile .
 	nerdctl save aspire-deez-nuts-web:latest | nerdctl --namespace k8s.io load
 
-docker-build: docker-build-api docker-build-web
+docker-build-fuzz:
+	@echo "Building Fuzz Testing service..."
+	nerdctl build -t aspire-deez-nuts-fuzz:latest -f src/AspireDeezNuts.FuzzTesting/Dockerfile .
+	nerdctl save aspire-deez-nuts-fuzz:latest | nerdctl --namespace k8s.io load
+
+docker-build: docker-build-api docker-build-web docker-build-fuzz
 
 # Deploy to Kubernetes
 k8s-deploy:
 	kubectl apply -k ./manifests/
 	kubectl rollout restart deployment/aspire-deez-nuts-api || true
 	kubectl rollout restart deployment/aspire-deez-nuts-web || true
+	kubectl rollout restart deployment/aspire-deez-nuts-fuzz || true
 	kubectl rollout restart deployment/aspire-dashboard || true
 	@echo "Waiting for dashboard to be ready..."
 	@kubectl wait --for=condition=ready pod -l app=aspire-dashboard --timeout=60s
@@ -102,3 +108,15 @@ shell-web:
 	fi; \
 	echo "📡 Connecting to pod: $$WEB_POD"; \
 	kubectl exec -it $$WEB_POD -- /bin/bash
+
+# Connect to Fuzz Testing service container shell
+shell-fuzz:
+	@echo "🔗 Connecting to Fuzz Testing service container..."
+	@FUZZ_POD=$$(kubectl get pods -l app=aspire-deez-nuts-fuzz -o jsonpath='{.items[0].metadata.name}' 2>/dev/null); \
+	if [ -z "$$FUZZ_POD" ]; then \
+		echo "❌ No Fuzz Testing service pods found. Is the deployment running?"; \
+		echo "Run 'make k8s-status' to check pod status"; \
+		exit 1; \
+	fi; \
+	echo "📡 Connecting to pod: $$FUZZ_POD"; \
+	kubectl exec -it $$FUZZ_POD -- /bin/bash

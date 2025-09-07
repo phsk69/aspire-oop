@@ -1,5 +1,20 @@
 # TODO
 
+## Doing
+
+### Fuzz Testing Service (Completed)
+
+- [x] Create FuzzTesting class library with hosted service
+- [x] Integrate SharpFuzz for fuzz testing
+- [x] Implement fuzz tests for API authentication endpoints
+- [x] Implement fuzz tests for API user management endpoints  
+- [x] Implement fuzz tests for API posts endpoints
+- [x] Add continuous fuzz testing as background service
+- [x] Integrate with AppHost for orchestration
+- [x] Add health checks and Aspire integration
+- [x] Configure for both local and Kubernetes deployment
+- [ ] Plan frontend fuzz testing implementation
+
 ## Immediate
 
 - [ ] Pagination on the API, with a central "chopper" setup, as we want to be able to fetch chunks in a good way

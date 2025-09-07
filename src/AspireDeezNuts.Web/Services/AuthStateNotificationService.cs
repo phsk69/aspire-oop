@@ -35,10 +35,10 @@ public class AuthStateNotificationService(
             
             await hubContext.Clients.Group(groupName).SendAsync("TokenRefreshed", new
             {
-                ExpiresAt = newTokenInfo.ExpiresAt,
-                IssuedAt = newTokenInfo.IssuedAt,
-                TimeUntilExpiry = newTokenInfo.TimeUntilExpiry,
-                IsExpired = newTokenInfo.IsExpired,
+                newTokenInfo.ExpiresAt,
+                newTokenInfo.IssuedAt,
+                newTokenInfo.TimeUntilExpiry,
+                newTokenInfo.IsExpired,
                 RefreshedAt = DateTime.UtcNow
             });
             

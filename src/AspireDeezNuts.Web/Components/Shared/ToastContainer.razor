@@ -8,6 +8,7 @@
 
 @code {
     private List<ToastMessage> toastMessages = new();
+    private int _lastToastCount = 0;
 
     private bool _subscribed = false;
 
@@ -27,6 +28,17 @@
             _subscribed = true;
         }
         await base.OnAfterRenderAsync(firstRender);
+    }
+
+    protected override bool ShouldRender()
+    {
+        // Only re-render if the number of toast messages has changed
+        var currentCount = toastMessages.Count;
+        var shouldRender = currentCount != _lastToastCount;
+        _lastToastCount = currentCount;
+        
+        Logger.LogDebug("ToastContainer ShouldRender: {ShouldRender} (messages: {Count})", shouldRender, currentCount);
+        return shouldRender;
     }
 
     private void ShowToast(ToastMessage message)
