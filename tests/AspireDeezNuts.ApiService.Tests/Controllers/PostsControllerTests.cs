@@ -51,14 +51,14 @@ public class PostsControllerTests
                     var databaseName = $"TestDb_PostsController_{Guid.NewGuid()}";
                     
                     // Remove the existing DbContext registration
-                    var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppIdentityDbContext>));
+                    var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppMigrationDbContext>));
                     if (descriptor != null)
                     {
                         services.Remove(descriptor);
                     }
 
                     // Add test database
-                    services.AddDbContext<AppIdentityDbContext>(options =>
+                    services.AddDbContext<AppMigrationDbContext>(options =>
                         options.UseInMemoryDatabase(databaseName));
                     
                     // Replace the registered IPostRepository with our test implementation

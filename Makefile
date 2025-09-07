@@ -1,4 +1,4 @@
-.PHONY: build run clean restore test dev web-dev docker-build-api docker-build-web docker-build-fuzz docker-build k8s-generate k8s-deploy deploy k8s-status k8s-clean token format shell-api shell-web shell-fuzz update-minor
+.PHONY: build run clean restore test dev web-dev docker-build-api docker-build-web docker-build-fuzz docker-build k8s-generate k8s-deploy deploy k8s-status k8s-clean token format shell-api shell-web shell-fuzz update-minor ef-add-migration ef-update-database ef-remove-migration ef-drop-database ef-list-migrations ef-script-migration ef-reset-database ef-help
 
 # Default target
 all: restore build
@@ -120,3 +120,93 @@ shell-fuzz:
 	fi; \
 	echo "📡 Connecting to pod: $$FUZZ_POD"; \
 	kubectl exec -it $$FUZZ_POD -- /bin/bash
+
+# Entity Framework Core Commands
+
+# Add a new migration - Usage: make ef-add-migration NAME=MigrationName
+ef-add-migration:
+	@if [ -z "$(NAME)" ]; then \
+		echo "❌ Migration name is required. Usage: make ef-add-migration NAME=MigrationName"; \
+		exit 1; \
+	fi
+	@echo "📦 Adding migration: $(NAME)"
+	cd src/AspireDeezNuts.ApiService && \
+	dotnet ef migrations add $(NAME) --context AppMigrationDbContext
+
+# Update database with latest migrations
+ef-update-database:
+	@echo "🔄 Updating database with latest migrations..."
+	cd src/AspireDeezNuts.ApiService && \
+	dotnet ef database update --context AppMigrationDbContext
+
+# Remove the last migration
+ef-remove-migration:
+	@echo "🗑️  Removing last migration..."
+	cd src/AspireDeezNuts.ApiService && \
+	dotnet ef migrations remove --context AppMigrationDbContext
+
+# Drop the database (WARNING: This will delete all data!)
+ef-drop-database:
+	@echo "⚠️  WARNING: This will drop the entire database and all data will be lost!"
+	@echo "Are you sure you want to continue? Type 'yes' to confirm:"
+	@read -r confirm; \
+	if [ "$$confirm" = "yes" ]; then \
+		echo "💥 Dropping database..."; \
+		cd src/AspireDeezNuts.ApiService && \
+		dotnet ef database drop --context AppMigrationDbContext --force; \
+	else \
+		echo "❌ Database drop cancelled."; \
+	fi
+
+# List all migrations
+ef-list-migrations:
+	@echo "📋 Listing all migrations..."
+	cd src/AspireDeezNuts.ApiService && \
+	dotnet ef migrations list --context AppMigrationDbContext
+
+# Generate SQL script for migrations - Usage: make ef-script-migration [FROM=StartMigration] [TO=EndMigration]
+ef-script-migration:
+	@echo "📜 Generating SQL migration script..."
+	@if [ -n "$(FROM)" ] && [ -n "$(TO)" ]; then \
+		echo "📜 Generating script from $(FROM) to $(TO)..."; \
+		cd src/AspireDeezNuts.ApiService && \
+		dotnet ef migrations script $(FROM) $(TO) --context AppMigrationDbContext --output migrations-$(FROM)-to-$(TO).sql; \
+		echo "✅ Script saved to: src/AspireDeezNuts.ApiService/migrations-$(FROM)-to-$(TO).sql"; \
+	elif [ -n "$(FROM)" ]; then \
+		echo "📜 Generating script from $(FROM) to latest..."; \
+		cd src/AspireDeezNuts.ApiService && \
+		dotnet ef migrations script $(FROM) --context AppMigrationDbContext --output migrations-$(FROM)-to-latest.sql; \
+		echo "✅ Script saved to: src/AspireDeezNuts.ApiService/migrations-$(FROM)-to-latest.sql"; \
+	else \
+		echo "📜 Generating complete migration script..."; \
+		cd src/AspireDeezNuts.ApiService && \
+		dotnet ef migrations script --context AppMigrationDbContext --output complete-migrations.sql; \
+		echo "✅ Script saved to: src/AspireDeezNuts.ApiService/complete-migrations.sql"; \
+	fi
+
+# Reset database (drop and recreate with latest migrations)
+ef-reset-database: ef-drop-database ef-update-database
+	@echo "✅ Database reset completed!"
+
+# EF Core help
+ef-help:
+	@echo "🔧 Entity Framework Core Commands:"
+	@echo ""
+	@echo "Migration Management:"
+	@echo "  make ef-add-migration NAME=MigrationName  - Add a new migration"
+	@echo "  make ef-update-database                   - Apply migrations to database"
+	@echo "  make ef-remove-migration                  - Remove the last migration"
+	@echo "  make ef-list-migrations                   - List all migrations"
+	@echo ""
+	@echo "Database Management:"
+	@echo "  make ef-drop-database                     - Drop the database (⚠️  DESTRUCTIVE)"
+	@echo "  make ef-reset-database                    - Drop and recreate database"
+	@echo ""
+	@echo "SQL Script Generation:"
+	@echo "  make ef-script-migration                  - Generate complete SQL script"
+	@echo "  make ef-script-migration FROM=Start      - Generate script from specific migration"
+	@echo "  make ef-script-migration FROM=Start TO=End - Generate script between migrations"
+	@echo ""
+	@echo "Examples:"
+	@echo "  make ef-add-migration NAME=AddUserTable"
+	@echo "  make ef-script-migration FROM=InitialCreate TO=AddUserTable"

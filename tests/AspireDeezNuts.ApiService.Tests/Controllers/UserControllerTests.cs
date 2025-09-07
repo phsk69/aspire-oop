@@ -41,13 +41,13 @@ public class UserControllerTests
                 {
                     var databaseName = $"TestDb_UserController_{DateTimeOffset.UtcNow.Ticks}_{Guid.NewGuid()}";
 
-                    var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppIdentityDbContext>));
+                    var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppMigrationDbContext>));
                     if (descriptor != null)
                     {
                         services.Remove(descriptor);
                     }
 
-                    services.AddDbContext<AppIdentityDbContext>(options =>
+                    services.AddDbContext<AppMigrationDbContext>(options =>
                         options.UseInMemoryDatabase(databaseName));
                 });
             });

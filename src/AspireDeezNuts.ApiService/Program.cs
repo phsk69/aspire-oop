@@ -20,19 +20,164 @@ if (File.Exists(secretsPath))
 // Add service defaults & Aspire client integrations.
 builder.AddServiceDefaults();
 
-// Configure Entity Framework with Identity
-var useInMemoryDb = builder.Configuration.GetValue("UseInMemoryDatabase", true);
-if (useInMemoryDb)
+// Configure database options
+builder.Services.Configure<DatabaseOptions>(builder.Configuration.GetSection(DatabaseOptions.Database));
+builder.Services.Configure<ConnectionStrings>(builder.Configuration.GetSection(ConnectionStrings.Section));
+builder.Services.Configure<SeedDataOptions>(builder.Configuration.GetSection(SeedDataOptions.SeedData));
+var databaseOptions = builder.Configuration.GetSection(DatabaseOptions.Database).Get<DatabaseOptions>() ?? new DatabaseOptions();
+var connectionStrings = builder.Configuration.GetSection(ConnectionStrings.Section).Get<ConnectionStrings>() ?? new ConnectionStrings();
+
+// Configure all three DbContexts
+if (databaseOptions.UseInMemory)
 {
-    builder.Services.AddDbContext<AppIdentityDbContext>(options =>
-        options.UseInMemoryDatabase("IdentityDb"));
+    // All contexts use the same in-memory database for development
+    var dbName = "AspireDeezNutsDb";
+    
+    builder.Services.AddDbContext<AppMigrationDbContext>(options =>
+    {
+        options.UseInMemoryDatabase(dbName);
+        if (databaseOptions.EnableSensitiveDataLogging)
+            options.EnableSensitiveDataLogging();
+    });
+    
+    builder.Services.AddDbContext<AppReadWriteDbContext>(options =>
+    {
+        options.UseInMemoryDatabase(dbName);
+        if (databaseOptions.EnableSensitiveDataLogging)
+            options.EnableSensitiveDataLogging();
+    });
+    
+    builder.Services.AddDbContext<AppReadOnlyDbContext>(options =>
+    {
+        options.UseInMemoryDatabase(dbName);
+        if (databaseOptions.EnableSensitiveDataLogging)
+            options.EnableSensitiveDataLogging();
+        options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
+    });
+}
+else if (databaseOptions.UsePostgreSql)
+{
+    // Migration context - for schema changes
+    var migrationConnectionString = connectionStrings.GetMigrationConnectionString();
+    if (!string.IsNullOrEmpty(migrationConnectionString) && migrationConnectionString != "DataSource=:memory:")
+    {
+        builder.Services.AddDbContext<AppMigrationDbContext>(options =>
+        {
+            options.UseNpgsql(migrationConnectionString, npgsqlOptions =>
+            {
+                npgsqlOptions.CommandTimeout(databaseOptions.CommandTimeout);
+                if (databaseOptions.EnableRetryOnFailure)
+                {
+                    npgsqlOptions.EnableRetryOnFailure(
+                        maxRetryCount: databaseOptions.MaxRetryCount,
+                        maxRetryDelay: TimeSpan.FromSeconds(databaseOptions.MaxRetryDelay),
+                        errorCodesToAdd: null);
+                }
+            });
+            if (databaseOptions.EnableSensitiveDataLogging)
+                options.EnableSensitiveDataLogging();
+        });
+    }
+    else
+    {
+        builder.Services.AddDbContext<AppMigrationDbContext>(options =>
+        {
+            options.UseInMemoryDatabase("AspireDeezNutsDb");
+            if (databaseOptions.EnableSensitiveDataLogging)
+                options.EnableSensitiveDataLogging();
+        });
+    }
+    
+    // Read-Write context - for DML operations
+    var readWriteConnectionString = connectionStrings.GetReadWriteConnectionString();
+    if (!string.IsNullOrEmpty(readWriteConnectionString) && readWriteConnectionString != "DataSource=:memory:")
+    {
+        builder.Services.AddDbContext<AppReadWriteDbContext>(options =>
+        {
+            options.UseNpgsql(readWriteConnectionString, npgsqlOptions =>
+            {
+                npgsqlOptions.CommandTimeout(databaseOptions.CommandTimeout);
+                if (databaseOptions.EnableRetryOnFailure)
+                {
+                    npgsqlOptions.EnableRetryOnFailure(
+                        maxRetryCount: databaseOptions.MaxRetryCount,
+                        maxRetryDelay: TimeSpan.FromSeconds(databaseOptions.MaxRetryDelay),
+                        errorCodesToAdd: null);
+                }
+            });
+            if (databaseOptions.EnableSensitiveDataLogging)
+                options.EnableSensitiveDataLogging();
+        });
+    }
+    else
+    {
+        builder.Services.AddDbContext<AppReadWriteDbContext>(options =>
+        {
+            options.UseInMemoryDatabase("AspireDeezNutsDb");
+            if (databaseOptions.EnableSensitiveDataLogging)
+                options.EnableSensitiveDataLogging();
+        });
+    }
+    
+    // Read-Only context - for SELECT operations
+    var readOnlyConnectionString = connectionStrings.GetReadOnlyConnectionString();
+    if (!string.IsNullOrEmpty(readOnlyConnectionString) && readOnlyConnectionString != "DataSource=:memory:")
+    {
+        builder.Services.AddDbContext<AppReadOnlyDbContext>(options =>
+        {
+            options.UseNpgsql(readOnlyConnectionString, npgsqlOptions =>
+            {
+                npgsqlOptions.CommandTimeout(databaseOptions.CommandTimeout);
+                if (databaseOptions.EnableRetryOnFailure)
+                {
+                    npgsqlOptions.EnableRetryOnFailure(
+                        maxRetryCount: databaseOptions.MaxRetryCount,
+                        maxRetryDelay: TimeSpan.FromSeconds(databaseOptions.MaxRetryDelay),
+                        errorCodesToAdd: null);
+                }
+            });
+            if (databaseOptions.EnableSensitiveDataLogging)
+                options.EnableSensitiveDataLogging();
+            options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
+        });
+    }
+    else
+    {
+        builder.Services.AddDbContext<AppReadOnlyDbContext>(options =>
+        {
+            options.UseInMemoryDatabase("AspireDeezNutsDb");
+            if (databaseOptions.EnableSensitiveDataLogging)
+                options.EnableSensitiveDataLogging();
+            options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
+        });
+    }
 }
 else
 {
-    // TODO: Add connection string for production database
-    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-    builder.Services.AddDbContext<AppIdentityDbContext>(options =>
-        options.UseSqlServer(connectionString));
+    // Default to InMemory for all contexts
+    var dbName = "AspireDeezNutsDb";
+    
+    builder.Services.AddDbContext<AppMigrationDbContext>(options =>
+    {
+        options.UseInMemoryDatabase(dbName);
+        if (databaseOptions.EnableSensitiveDataLogging)
+            options.EnableSensitiveDataLogging();
+    });
+    
+    builder.Services.AddDbContext<AppReadWriteDbContext>(options =>
+    {
+        options.UseInMemoryDatabase(dbName);
+        if (databaseOptions.EnableSensitiveDataLogging)
+            options.EnableSensitiveDataLogging();
+    });
+    
+    builder.Services.AddDbContext<AppReadOnlyDbContext>(options =>
+    {
+        options.UseInMemoryDatabase(dbName);
+        if (databaseOptions.EnableSensitiveDataLogging)
+            options.EnableSensitiveDataLogging();
+        options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
+    });
 }
 
 // Add Identity services
@@ -52,7 +197,7 @@ builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
     options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
     options.Lockout.MaxFailedAccessAttempts = 5;
 })
-.AddEntityFrameworkStores<AppIdentityDbContext>()
+.AddEntityFrameworkStores<AppReadWriteDbContext>()
 .AddDefaultTokenProviders();
 
 // Configure JWT authentication
@@ -116,6 +261,8 @@ builder.Services.AddAuthorization(options =>
 // Add services to the container.
 builder.Services.AddScoped<ITokenService, JwtTokenService>();
 builder.Services.AddScoped<IDataSeeder, DataSeeder>();
+builder.Services.AddScoped<IIdentityDbService, IdentityDbContextService>();
+builder.Services.AddScoped<IPostsDbService, PostsDbContextService>();
 builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -187,12 +334,76 @@ var app = builder.Build();
 // Ensure database is created and seeded
 using (var scope = app.Services.CreateScope())
 {
-    var dbContext = scope.ServiceProvider.GetRequiredService<AppIdentityDbContext>();
-    dbContext.Database.EnsureCreated();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+    var dbOptions = configuration.GetSection(DatabaseOptions.Database).Get<DatabaseOptions>() ?? new DatabaseOptions();
     
-    // Run data seeder
-    var seeder = scope.ServiceProvider.GetRequiredService<IDataSeeder>();
-    await seeder.SeedAsync();
+    if (dbOptions.UseInMemory)
+    {
+        logger.LogInformation("Using InMemory database, ensuring created");
+        var migrationContext = scope.ServiceProvider.GetRequiredService<AppMigrationDbContext>();
+        await migrationContext.Database.EnsureCreatedAsync();
+    }
+    else if (dbOptions.UsePostgreSql)
+    {
+        try
+        {
+            logger.LogInformation("Checking PostgreSQL database connection");
+            var migrationContext = scope.ServiceProvider.GetRequiredService<AppMigrationDbContext>();
+            
+            if (await migrationContext.Database.CanConnectAsync())
+            {
+                logger.LogInformation("PostgreSQL connection successful");
+                
+                if (dbOptions.AutoMigrateOnStartup)
+                {
+                    var pendingMigrations = await migrationContext.Database.GetPendingMigrationsAsync();
+                    if (pendingMigrations.Any())
+                    {
+                        logger.LogInformation("Auto-migration enabled: Applying {Count} pending migrations", pendingMigrations.Count());
+                        await migrationContext.Database.MigrateAsync();
+                        logger.LogInformation("Database migrations completed successfully");
+                    }
+                    else
+                    {
+                        logger.LogInformation("Database is up to date");
+                    }
+                }
+                else
+                {
+                    var pendingMigrations = await migrationContext.Database.GetPendingMigrationsAsync();
+                    if (pendingMigrations.Any())
+                    {
+                        logger.LogWarning("Auto-migration disabled: {Count} pending migrations found. Run 'make ef-update-database' to apply them", pendingMigrations.Count());
+                    }
+                    else
+                    {
+                        logger.LogInformation("Database is up to date");
+                    }
+                }
+            }
+            else
+            {
+                logger.LogWarning("Cannot connect to PostgreSQL, using InMemory fallback");
+                await migrationContext.Database.EnsureCreatedAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error connecting to PostgreSQL, using InMemory fallback");
+            var migrationContext = scope.ServiceProvider.GetRequiredService<AppMigrationDbContext>();
+            await migrationContext.Database.EnsureCreatedAsync();
+        }
+    }
+    else
+    {
+        var migrationContext = scope.ServiceProvider.GetRequiredService<AppMigrationDbContext>();
+        await migrationContext.Database.EnsureCreatedAsync();
+    }
+    
+    // Run data seeder using the Identity service
+    var identityService = scope.ServiceProvider.GetRequiredService<IIdentityDbService>();
+    await identityService.SeedDataAsync();
 }
 
 // Configure the HTTP request pipeline.

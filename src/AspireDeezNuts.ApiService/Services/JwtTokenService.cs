@@ -13,12 +13,12 @@ namespace AspireDeezNuts.ApiService.Services;
 public class JwtTokenService(
     IConfiguration configuration,
     UserManager<IdentityUser> userManager,
-    AppIdentityDbContext dbContext,
+    AppReadWriteDbContext dbContext,
     ILogger<JwtTokenService> logger) : ITokenService
 {
     private readonly IConfiguration _configuration = configuration;
     private readonly UserManager<IdentityUser> _userManager = userManager;
-    private readonly AppIdentityDbContext _dbContext = dbContext;
+    private readonly AppReadWriteDbContext _dbContext = dbContext;
     private readonly ILogger<JwtTokenService> _logger = logger;
 
     public async Task<TokenResponse> GenerateTokensAsync(IdentityUser user)
