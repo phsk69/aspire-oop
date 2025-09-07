@@ -12,11 +12,11 @@ public class PostsFuzzTest(
     public async Task<FuzzTestResult> ExecuteAsync(CancellationToken cancellationToken)
     {
         var client = httpClientFactory.CreateClient("ApiService");
-        
+
         // Set the base address using service discovery format
         // This will be resolved by Aspire's service discovery to the actual API URL
         client.BaseAddress = new Uri("https+http://aspire-deez-nuts-api");
-        
+
         var iterations = 0;
         var errors = new List<string>();
 
@@ -31,10 +31,10 @@ public class PostsFuzzTest(
 
             // Test GET posts with various query parameters
             iterations += await FuzzGetPostsEndpointAsync(client, errors, cancellationToken);
-            
+
             // Test GET post by ID with various IDs
             iterations += await FuzzGetPostByIdEndpointAsync(client, errors, cancellationToken);
-            
+
             // Test pagination with edge cases
             iterations += await FuzzPaginationEndpointAsync(client, errors, cancellationToken);
 
@@ -57,21 +57,23 @@ public class PostsFuzzTest(
         try
         {
             // Create a test user and login
-            var registerRequest = new { 
-                Username = $"fuzztest_{Guid.NewGuid():N}", 
+            var registerRequest = new
+            {
+                Username = $"fuzztest_{Guid.NewGuid():N}",
                 Password = "TestPass123!",
                 Email = "fuzz@test.com"
             };
-            
+
             await client.PostAsJsonAsync("/api/v1/auth/register", registerRequest, cancellationToken);
-            
-            var loginRequest = new {
+
+            var loginRequest = new
+            {
                 registerRequest.Username,
-                registerRequest.Password 
+                registerRequest.Password
             };
-            
+
             var response = await client.PostAsJsonAsync("/api/v1/auth/login", loginRequest, cancellationToken);
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var content = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -86,7 +88,7 @@ public class PostsFuzzTest(
         {
             logger.LogWarning(ex, "Could not obtain auth token for testing");
         }
-        
+
         return null;
     }
 
@@ -101,16 +103,16 @@ public class PostsFuzzTest(
                 break;
 
             iterations++;
-            
+
             try
             {
                 var response = await client.GetAsync($"/api/v1/posts?{param}", cancellationToken);
-                
+
                 if ((int)response.StatusCode >= 500)
                 {
                     errors.Add($"Server error on GET posts with params: {param}");
                 }
-                
+
                 // Check for information disclosure
                 if (response.IsSuccessStatusCode)
                 {
@@ -145,16 +147,16 @@ public class PostsFuzzTest(
                 break;
 
             iterations++;
-            
+
             try
             {
                 var response = await client.GetAsync($"/api/v1/posts/{id}", cancellationToken);
-                
+
                 if ((int)response.StatusCode >= 500)
                 {
                     errors.Add($"Server error on GET post with ID: {id}");
                 }
-                
+
                 // Check for SQL errors in response
                 if (!response.IsSuccessStatusCode)
                 {
@@ -185,23 +187,23 @@ public class PostsFuzzTest(
                 break;
 
             iterations++;
-            
+
             try
             {
                 var response = await client.GetAsync($"/api/v1/posts?{param}", cancellationToken);
-                
+
                 if ((int)response.StatusCode >= 500)
                 {
                     errors.Add($"Server error on pagination with params: {param}");
                 }
-                
+
                 // Check for memory exhaustion with large page sizes
                 if (param.Contains("pageSize=999999"))
                 {
                     var memoryBefore = GC.GetTotalMemory(false);
                     await response.Content.ReadAsStringAsync(cancellationToken);
                     var memoryAfter = GC.GetTotalMemory(false);
-                    
+
                     if (memoryAfter - memoryBefore > 100_000_000) // 100MB increase
                     {
                         errors.Add($"Potential memory exhaustion vulnerability with params: {param}");

@@ -55,7 +55,7 @@ public class RateLimitingService : IRateLimitingService, IDisposable
     public RateLimitingService(ILogger<RateLimitingService> logger)
     {
         _logger = logger;
-        
+
         // Clean up expired entries every 5 minutes
         _cleanupTimer = new Timer(CleanupExpiredEntries, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
     }
@@ -77,14 +77,14 @@ public class RateLimitingService : IRateLimitingService, IDisposable
             // Check if we're within limits
             if (history.Attempts.Count >= maxAttempts)
             {
-                _logger.LogWarning("Rate limit exceeded for operation '{OperationKey}'. {AttemptCount}/{MaxAttempts} attempts in {TimeWindow}", 
+                _logger.LogWarning("Rate limit exceeded for operation '{OperationKey}'. {AttemptCount}/{MaxAttempts} attempts in {TimeWindow}",
                     operationKey, history.Attempts.Count, maxAttempts, timeWindow);
                 return false;
             }
 
             // Record this attempt
             history.Attempts.Add(now);
-            _logger.LogDebug("Operation '{OperationKey}' allowed. {AttemptCount}/{MaxAttempts} attempts in {TimeWindow}", 
+            _logger.LogDebug("Operation '{OperationKey}' allowed. {AttemptCount}/{MaxAttempts} attempts in {TimeWindow}",
                 operationKey, history.Attempts.Count, maxAttempts, timeWindow);
             return true;
         }

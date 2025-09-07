@@ -3,25 +3,17 @@ using Microsoft.Extensions.Options;
 
 namespace AspireDeezNuts.ApiService.Data;
 
-public abstract class DbContextServiceBase<TContext> : IDbContextService<TContext> 
+public abstract class DbContextServiceBase<TContext>(
+    IConfiguration configuration,
+    IServiceProvider serviceProvider,
+    IOptions<DatabaseOptions> databaseOptions,
+    ILogger logger) : IDbContextService<TContext>
     where TContext : DbContext
 {
-    protected readonly IConfiguration _configuration;
-    protected readonly IServiceProvider _serviceProvider;
-    protected readonly DatabaseOptions _databaseOptions;
-    protected readonly ILogger _logger;
-
-    protected DbContextServiceBase(
-        IConfiguration configuration,
-        IServiceProvider serviceProvider,
-        IOptions<DatabaseOptions> databaseOptions,
-        ILogger logger)
-    {
-        _configuration = configuration;
-        _serviceProvider = serviceProvider;
-        _databaseOptions = databaseOptions.Value;
-        _logger = logger;
-    }
+    protected readonly IConfiguration _configuration = configuration;
+    protected readonly IServiceProvider _serviceProvider = serviceProvider;
+    protected readonly DatabaseOptions _databaseOptions = databaseOptions.Value;
+    protected readonly ILogger _logger = logger;
 
     public bool IsInMemory => _databaseOptions.UseInMemory;
 
@@ -39,7 +31,7 @@ public abstract class DbContextServiceBase<TContext> : IDbContextService<TContex
         };
 
         var connectionString = _configuration.GetConnectionString(connectionStringName);
-        
+
         if (string.IsNullOrEmpty(connectionString))
         {
             _logger.LogWarning("Connection string '{ConnectionStringName}' not found, falling back to ReadWrite", connectionStringName);

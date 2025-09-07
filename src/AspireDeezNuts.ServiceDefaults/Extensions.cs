@@ -63,7 +63,7 @@ public static class Extensions
                     // Uncomment the following line to enable gRPC instrumentation (requires the OpenTelemetry.Instrumentation.GrpcNetClient package)
                     //.AddGrpcClientInstrumentation()
                     .AddHttpClientInstrumentation();
-                
+
                 // Add custom trace processor to filter out Blazor Server component rendering traces
                 tracing.AddProcessor(new BlazorComponentTraceFilter());
             });

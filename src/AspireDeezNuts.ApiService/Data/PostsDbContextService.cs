@@ -5,27 +5,13 @@ using Microsoft.Extensions.Options;
 namespace AspireDeezNuts.ApiService.Data;
 
 // Service that manages Posts operations with appropriate DbContext based on operation type
-public class PostsDbContextService : IPostsDbService
+public class PostsDbContextService(
+    IOptions<DatabaseOptions> databaseOptions,
+    IOptions<ConnectionStrings> connectionStrings,
+    ILogger<PostsDbContextService> logger) : IPostsDbService
 {
-    private readonly IServiceProvider _serviceProvider;
-    private readonly IConfiguration _configuration;
-    private readonly DatabaseOptions _databaseOptions;
-    private readonly ConnectionStrings _connectionStrings;
-    private readonly ILogger<PostsDbContextService> _logger;
-
-    public PostsDbContextService(
-        IServiceProvider serviceProvider,
-        IConfiguration configuration,
-        IOptions<DatabaseOptions> databaseOptions,
-        IOptions<ConnectionStrings> connectionStrings,
-        ILogger<PostsDbContextService> logger)
-    {
-        _serviceProvider = serviceProvider;
-        _configuration = configuration;
-        _databaseOptions = databaseOptions.Value;
-        _connectionStrings = connectionStrings.Value;
-        _logger = logger;
-    }
+    private readonly DatabaseOptions _databaseOptions = databaseOptions.Value;
+    private readonly ConnectionStrings _connectionStrings = connectionStrings.Value;
 
     // Read operations use ReadOnlyDbContext
     public async Task<List<Post>> GetPostsAsync(int skip = 0, int take = 10, CancellationToken cancellationToken = default)
@@ -107,7 +93,7 @@ public class PostsDbContextService : IPostsDbService
     {
         await using var context = GetMigrationContext();
         await context.Database.MigrateAsync(cancellationToken);
-        _logger.LogInformation("Posts database migration completed successfully");
+        logger.LogInformation("Posts database migration completed successfully");
     }
 
     public async Task<bool> CanConnectAsync(CancellationToken cancellationToken = default)
@@ -119,7 +105,7 @@ public class PostsDbContextService : IPostsDbService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Cannot connect to Posts database");
+            logger.LogError(ex, "Cannot connect to Posts database");
             return false;
         }
     }
@@ -154,13 +140,13 @@ public class PostsDbContextService : IPostsDbService
             optionsBuilder.EnableSensitiveDataLogging();
         }
 
-        optionsBuilder.LogTo(message => _logger.LogDebug(message));
+        optionsBuilder.LogTo(message => logger.LogDebug(message));
 
         if (_databaseOptions.UseInMemory)
         {
             var databaseName = "AspireDeezNutsPosts";
             optionsBuilder.UseInMemoryDatabase(databaseName);
-            _logger.LogInformation("Using InMemory database: {DatabaseName}", databaseName);
+            logger.LogInformation("Using InMemory database: {DatabaseName}", databaseName);
         }
         else if (_databaseOptions.UsePostgreSql)
         {
@@ -185,20 +171,20 @@ public class PostsDbContextService : IPostsDbService
                             errorCodesToAdd: null);
                     }
                 });
-                _logger.LogInformation("Using PostgreSQL database with {ConnectionType} connection", connectionType);
+                logger.LogInformation("Using PostgreSQL database with {ConnectionType} connection", connectionType);
             }
             else
             {
                 var databaseName = "AspireDeezNutsPosts";
                 optionsBuilder.UseInMemoryDatabase(databaseName);
-                _logger.LogWarning("No PostgreSQL connection string found, falling back to InMemory database");
+                logger.LogWarning("No PostgreSQL connection string found, falling back to InMemory database");
             }
         }
         else
         {
             var databaseName = "AspireDeezNutsPosts";
             optionsBuilder.UseInMemoryDatabase(databaseName);
-            _logger.LogInformation("Using InMemory database: {DatabaseName}", databaseName);
+            logger.LogInformation("Using InMemory database: {DatabaseName}", databaseName);
         }
     }
 }

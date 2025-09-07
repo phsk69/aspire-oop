@@ -84,7 +84,7 @@ public class TokenInfo
     public Dictionary<string, string> Claims { get; set; } = [];
 
     public bool IsExpired => DateTime.UtcNow >= ExpiresAt;
-    public TimeSpan TimeUntilExpiry => ExpiresAt - DateTime.UtcNow > TimeSpan.Zero 
-        ? ExpiresAt - DateTime.UtcNow 
+    public TimeSpan TimeUntilExpiry => ExpiresAt - DateTime.UtcNow > TimeSpan.Zero
+        ? ExpiresAt - DateTime.UtcNow
         : TimeSpan.Zero;
 }

@@ -128,7 +128,7 @@ public class AuthController(
     {
         var adminEmail = User.Identity?.Name;
         var adminUser = await _userManager.FindByEmailAsync(adminEmail ?? "");
-        _logger.LogInformation("User: {AdminUserId} - Register endpoint called for new user: {Email}", 
+        _logger.LogInformation("User: {AdminUserId} - Register endpoint called for new user: {Email}",
             adminUser?.Id ?? "Unknown", request.Email);
 
         if (!ModelState.IsValid)
@@ -163,7 +163,7 @@ public class AuthController(
             await _userManager.AddToRoleAsync(user, "User"); // Default role
         }
 
-        _logger.LogInformation("User: {AdminUserId} - Successfully registered new user: {NewUserId} with role: {Role}", 
+        _logger.LogInformation("User: {AdminUserId} - Successfully registered new user: {NewUserId} with role: {Role}",
             adminUser?.Id ?? "Unknown", user.Id, request.Role ?? "User");
 
         return Ok(new { message = "User registered successfully", userId = user.Id });
@@ -176,7 +176,7 @@ public class AuthController(
         var userEmail = User.Identity?.Name;
         var user = await _userManager.FindByEmailAsync(userEmail ?? "");
         _logger.LogInformation("User: {UserId} - Test authentication endpoint accessed", user?.Id ?? "Unknown");
-        
+
         return Ok(new
         {
             message = "You are authenticated!",
@@ -192,7 +192,7 @@ public class AuthController(
         var adminEmail = User.Identity?.Name;
         var adminUser = await _userManager.FindByEmailAsync(adminEmail ?? "");
         _logger.LogInformation("User: {UserId} - Test admin authentication endpoint accessed", adminUser?.Id ?? "Unknown");
-        
+
         return Ok(new { message = "You are an admin!" });
     }
 }

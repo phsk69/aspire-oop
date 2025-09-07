@@ -44,12 +44,12 @@ public class PostsControllerTests
                     config.Sources.Clear();
                     config.AddConfiguration(testConfig);
                 });
-                
+
                 builder.ConfigureServices(services =>
                 {
                     // Use a unique database name for each test method
                     var databaseName = $"TestDb_PostsController_{Guid.NewGuid()}";
-                    
+
                     // Remove the existing DbContext registration
                     var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppMigrationDbContext>));
                     if (descriptor != null)
@@ -60,7 +60,7 @@ public class PostsControllerTests
                     // Add test database
                     services.AddDbContext<AppMigrationDbContext>(options =>
                         options.UseInMemoryDatabase(databaseName));
-                    
+
                     // Replace the registered IPostRepository with our test implementation
                     var repoDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IPostRepository));
                     if (repoDescriptor != null)
@@ -74,7 +74,7 @@ public class PostsControllerTests
             });
 
         _client = _factory.CreateClient();
-        
+
         // Authenticate and get JWT token
         await AuthenticateAsync();
     }
@@ -99,12 +99,12 @@ public class PostsControllerTests
 
         var loginRequest = new { Email = adminEmail, Password = adminPassword };
         var response = await _client!.PostAsJsonAsync("/api/v1/auth/login", loginRequest, TestContext.CancellationTokenSource.Token);
-        
+
         Assert.IsTrue(response.IsSuccessStatusCode, $"Authentication failed: {response.StatusCode}");
-        
+
         var loginResponse = await response.Content.ReadFromJsonAsync<LoginResponse>(TestContext.CancellationTokenSource.Token);
         Assert.IsNotNull(loginResponse?.AccessToken, "Failed to get access token");
-        
+
         _jwtToken = loginResponse.AccessToken;
         _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _jwtToken);
     }
@@ -121,10 +121,10 @@ public class PostsControllerTests
     {
         // Arrange - Remove authentication header
         _client!.DefaultRequestHeaders.Authorization = null;
-        
+
         // Act
         var response = await _client.GetAsync("/api/v1/posts", TestContext.CancellationTokenSource.Token);
-        
+
         // Assert
         Assert.AreEqual(HttpStatusCode.Unauthorized, response.StatusCode);
     }

@@ -15,7 +15,7 @@ public class TestHttpClientFactory : IHttpClientFactory
         {
             return client;
         }
-        
+
         throw new InvalidOperationException($"No HttpClient configured for '{name}'");
     }
 }

@@ -3,7 +3,7 @@ namespace AspireDeezNuts.ApiService.Data;
 public class SeedDataOptions
 {
     public const string SeedData = "SeedData";
-    
+
     public UserSeedData? InitialAdmin { get; set; }
     public UserSeedData? InitialUser { get; set; }
 }

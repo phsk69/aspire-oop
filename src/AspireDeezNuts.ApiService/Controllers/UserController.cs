@@ -26,7 +26,7 @@ public class UserController(
             var adminEmail = User.Identity?.Name;
             var adminUser = await _userManager.FindByEmailAsync(adminEmail ?? "");
             _logger.LogInformation("User: {UserId} - Requested all users list", adminUser?.Id ?? "Unknown");
-            
+
             var users = await _userManager.Users.ToListAsync();
             var userDtos = new List<UserDto>();
 
@@ -63,7 +63,7 @@ public class UserController(
             var adminEmail = User.Identity?.Name;
             var adminUser = await _userManager.FindByEmailAsync(adminEmail ?? "");
             _logger.LogInformation("User: {UserId} - Requested user details for ID {TargetUserId}", adminUser?.Id ?? "Unknown", id);
-            
+
             var user = await _userManager.FindByIdAsync(id);
             if (user == null)
             {
@@ -101,7 +101,7 @@ public class UserController(
             var adminEmail = User.Identity?.Name;
             var adminUser = await _userManager.FindByEmailAsync(adminEmail ?? "");
             _logger.LogInformation("User: {UserId} - Requested to create new user with email {Email}", adminUser?.Id ?? "Unknown", createUserDto.Email);
-            
+
             if (!ModelState.IsValid)
             {
                 _logger.LogWarning("User: {UserId} - Invalid model state when creating user with email {Email}", adminUser?.Id ?? "Unknown", createUserDto.Email);
@@ -167,7 +167,7 @@ public class UserController(
             var adminEmail = User.Identity?.Name;
             var adminUser = await _userManager.FindByEmailAsync(adminEmail ?? "");
             _logger.LogInformation("User: {UserId} - Requested to update user {TargetUserId}", adminUser?.Id ?? "Unknown", id);
-            
+
             if (id != updateUserDto.Id)
             {
                 _logger.LogWarning("User: {UserId} - User ID mismatch when updating user. URL ID: {UrlId}, DTO ID: {DtoId}", adminUser?.Id ?? "Unknown", id, updateUserDto.Id);
@@ -224,7 +224,7 @@ public class UserController(
             var adminEmail = User.Identity?.Name;
             var adminUser = await _userManager.FindByEmailAsync(adminEmail ?? "");
             _logger.LogInformation("User: {UserId} - Requested to patch user {TargetUserId}", adminUser?.Id ?? "Unknown", id);
-            
+
             var user = await _userManager.FindByIdAsync(id);
             if (user == null)
             {
@@ -287,7 +287,7 @@ public class UserController(
             var adminUser = await _userManager.FindByEmailAsync(adminEmail ?? "");
             var action = roleUpdate.AddRole ? "add" : "remove";
             _logger.LogInformation("User: {UserId} - Requested to {Action} role {Role} for user {TargetUserId}", adminUser?.Id ?? "Unknown", action, roleUpdate.Role, id);
-            
+
             if (id != roleUpdate.UserId)
             {
                 _logger.LogWarning("User: {UserId} - User ID mismatch when updating role. URL ID: {UrlId}, DTO ID: {DtoId}", adminUser?.Id ?? "Unknown", id, roleUpdate.UserId);
@@ -344,7 +344,7 @@ public class UserController(
             var adminEmail = User.Identity?.Name;
             var adminUser = await _userManager.FindByEmailAsync(adminEmail ?? "");
             _logger.LogInformation("User: {UserId} - Requested to delete user {TargetUserId}", adminUser?.Id ?? "Unknown", id);
-            
+
             var user = await _userManager.FindByIdAsync(id);
             if (user == null)
             {

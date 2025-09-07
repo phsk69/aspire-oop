@@ -29,19 +29,19 @@ public class LoginComponentTests : Bunit.TestContext
         // Assert
         Assert.IsNotNull(component.Find("h4"));
         Assert.AreEqual("Login", component.Find("h4").TextContent);
-        
+
         Assert.IsNotNull(component.Find("form"));
         Assert.AreEqual("/api/login", component.Find("form").GetAttribute("action"));
         Assert.AreEqual("post", component.Find("form").GetAttribute("method"));
-        
+
         Assert.IsNotNull(component.Find("input[name='Email']"));
         Assert.AreEqual("email", component.Find("input[name='Email']").GetAttribute("type"));
         Assert.AreEqual("admin@example.com", component.Find("input[name='Email']").GetAttribute("value"));
-        
+
         Assert.IsNotNull(component.Find("input[name='Password']"));
         Assert.AreEqual("password", component.Find("input[name='Password']").GetAttribute("type"));
         Assert.AreEqual("AdminPass123!", component.Find("input[name='Password']").GetAttribute("value"));
-        
+
         Assert.IsNotNull(component.Find("button[type='submit']"));
         Assert.AreEqual("Login", component.Find("button[type='submit']").TextContent);
     }
@@ -182,7 +182,7 @@ public class LoginComponentTests : Bunit.TestContext
         // This test verifies the component metadata - in a real scenario
         // you would check route authorization, but for now we verify the component renders
         // which indicates the AllowAnonymous attribute is working correctly
-        
+
         // Act
         var component = RenderComponent<Login>();
 

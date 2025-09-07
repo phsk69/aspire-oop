@@ -16,7 +16,7 @@ public class PostsComponentTests : Bunit.TestContext
 {
     private TestToastService _toastService = null!;
     private TestHttpMessageHandler _httpMessageHandler = null!;
-    private readonly Post[] _testPosts = 
+    private readonly Post[] _testPosts =
     [
         new(1, 1, "First Post", "This is the first post body"),
         new(2, 1, "Second Post", "This is the second post body with much longer content that should be truncated in the card view because it exceeds one hundred characters."),
@@ -28,23 +28,23 @@ public class PostsComponentTests : Bunit.TestContext
     {
         _toastService = new TestToastService();
         _httpMessageHandler = new TestHttpMessageHandler();
-        
+
         Services.AddSingleton<IToastService>(_toastService);
         Services.AddSingleton<ILogger<Posts>>(new Logger<Posts>(new LoggerFactory()));
-        
+
         // Setup authorization
         this.AddTestAuthorization().SetAuthorized("TestUser");
-        
+
         // Configure HttpClientFactory
         var httpClient = new HttpClient(_httpMessageHandler)
         {
             BaseAddress = new Uri("https://localhost:7201/")
         };
-        
+
         var httpClientFactory = new TestHttpClientFactory();
         httpClientFactory.AddClient("authenticated-api", httpClient);
         Services.AddSingleton<IHttpClientFactory>(httpClientFactory);
-        
+
         // Setup minimal JSInterop for BlazorBootstrap components
         JSInterop.Mode = JSRuntimeMode.Loose;
     }
@@ -81,7 +81,7 @@ public class PostsComponentTests : Bunit.TestContext
         Assert.IsEmpty(component.FindAll(".spinner-border"));
         var cards = component.FindAll(".card");
         Assert.HasCount(3, cards);
-        
+
         var firstCard = cards[0];
         Assert.Contains("Post #1", firstCard.TextContent);
         Assert.Contains("First Post", firstCard.TextContent);
@@ -101,7 +101,7 @@ public class PostsComponentTests : Bunit.TestContext
 
         // Assert
         Assert.IsEmpty(component.FindAll(".spinner-border"));
-        
+
         var alert = component.Find(".alert.alert-warning");
         Assert.IsNotNull(alert);
         Assert.Contains("No posts available", alert.TextContent);
@@ -120,7 +120,7 @@ public class PostsComponentTests : Bunit.TestContext
         // Assert
         var cards = component.FindAll(".card");
         var secondCard = cards[1]; // Second post has long content
-        
+
         var cardText = secondCard.QuerySelector(".card-text");
         Assert.IsNotNull(cardText);
         Assert.IsTrue(cardText!.TextContent.EndsWith("..."));
@@ -135,7 +135,7 @@ public class PostsComponentTests : Bunit.TestContext
 
         // Act
         var component = RenderComponent<Posts>();
-        
+
         // Wait for initial render and component initialization
         await component.InvokeAsync(async () =>
         {
@@ -147,10 +147,10 @@ public class PostsComponentTests : Bunit.TestContext
         // Assert - Toast messages should show warnings and final error
         var warningToasts = _toastService.ToastMessages.Where(t => t.Type == ToastType.Warning).ToList();
         var errorToasts = _toastService.ToastMessages.Where(t => t.Type == ToastType.Danger).ToList();
-        
+
         // Should have warning toasts for retry attempts
         Assert.IsTrue(warningToasts.Count >= 2, "Should have at least 2 warning toasts for retries");
-        
+
         // Should have final error toast
         Assert.HasCount(1, errorToasts);
         Assert.AreEqual("Unable to load posts. Please try refreshing the page.", errorToasts[0].Message);
@@ -161,7 +161,7 @@ public class PostsComponentTests : Bunit.TestContext
     public async Task Posts_PageSizeDropdown_ChangesNumberOfDisplayedPosts()
     {
         // Arrange
-        var manyPosts = Enumerable.Range(1, 15).Select(i => 
+        var manyPosts = Enumerable.Range(1, 15).Select(i =>
             new Post(i, 1, $"Post {i}", $"Content for post {i}")).ToArray();
         _httpMessageHandler.SetupResponse("/api/v1/posts", HttpStatusCode.OK, manyPosts);
 
@@ -175,9 +175,9 @@ public class PostsComponentTests : Bunit.TestContext
 
         // Change page size to 25
         var pageSizeSelect = component.Find("select.form-select");
-        await pageSizeSelect.ChangeAsync(new Microsoft.AspNetCore.Components.ChangeEventArgs 
-        { 
-            Value = "25" 
+        await pageSizeSelect.ChangeAsync(new Microsoft.AspNetCore.Components.ChangeEventArgs
+        {
+            Value = "25"
         });
         await component.InvokeAsync(() => Task.Delay(100));
 
@@ -205,13 +205,13 @@ public class PostsComponentTests : Bunit.TestContext
         // Assert - All posts should have "Read More" buttons with proper onclick handlers
         var readMoreButtons = component.FindAll("button:contains('Read More')");
         Assert.HasCount(3, readMoreButtons);
-        
+
         // Verify buttons have the right styling for modal triggers
         foreach (var button in readMoreButtons)
         {
             Assert.IsTrue(button.HasAttribute("onclick") || button.HasAttribute("blazor:onclick"));
         }
-        
+
         // Verify truncated posts show "Read More" appropriately
         var cards = component.FindAll(".card");
         var secondCardText = cards[1].QuerySelector(".card-text");
@@ -219,7 +219,7 @@ public class PostsComponentTests : Bunit.TestContext
         Assert.IsTrue(secondCardText.TextContent.EndsWith("..."), "Long content should be truncated with ...");
     }
 
-    [TestMethod] 
+    [TestMethod]
     public async Task Posts_ModalMarkupExists_WhenPostsAreLoaded()
     {
         // Arrange
@@ -230,21 +230,21 @@ public class PostsComponentTests : Bunit.TestContext
         // Assert - Modal markup should exist in component (even if not visible)
         // BlazorBootstrap Modal component should be present in the markup
         var modalComponents = component.FindAll("modal");  // BlazorBootstrap Modal component
-        
+
         // Since the modal might not be rendered without selectedPost being set,
         // we just verify the component structure supports modal functionality
         var readMoreButtons = component.FindAll("button:contains('Read More')");
         Assert.HasCount(3, readMoreButtons, "Should have Read More buttons for modal triggers");
-        
+
         // Verify each post card has the structure needed for modal interaction
         var postCards = component.FindAll(".card");
         Assert.HasCount(3, postCards, "Should have 3 post cards");
-        
+
         foreach (var card in postCards)
         {
             var cardTitle = card.QuerySelector(".card-title");
             var readMoreBtn = card.QuerySelector("button:contains('Read More')");
-            
+
             Assert.IsNotNull(cardTitle, "Each card should have a title");
             Assert.IsNotNull(readMoreBtn, "Each card should have a Read More button");
         }
@@ -261,7 +261,7 @@ public class PostsComponentTests : Bunit.TestContext
         // Assert - All posts should have "Read More" buttons
         var readMoreButtons = component.FindAll("button:contains('Read More')");
         Assert.HasCount(3, readMoreButtons);
-        
+
         // Verify buttons have correct attributes
         foreach (var button in readMoreButtons)
         {

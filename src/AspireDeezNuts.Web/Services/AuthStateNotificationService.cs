@@ -32,7 +32,7 @@ public class AuthStateNotificationService(
         {
             var groupName = $"User_{userId}";
             logger.LogInformation("Broadcasting token refresh notification to group {GroupName}", groupName);
-            
+
             await hubContext.Clients.Group(groupName).SendAsync("TokenRefreshed", new
             {
                 newTokenInfo.ExpiresAt,
@@ -41,7 +41,7 @@ public class AuthStateNotificationService(
                 newTokenInfo.IsExpired,
                 RefreshedAt = DateTime.UtcNow
             });
-            
+
             logger.LogDebug("Token refresh notification sent successfully to group {GroupName}", groupName);
         }
         catch (Exception ex)
@@ -55,15 +55,15 @@ public class AuthStateNotificationService(
         try
         {
             var groupName = $"User_{userId}";
-            logger.LogInformation("Broadcasting auth state change notification to group {GroupName}: {IsAuthenticated}", 
+            logger.LogInformation("Broadcasting auth state change notification to group {GroupName}: {IsAuthenticated}",
                 groupName, isAuthenticated);
-            
+
             await hubContext.Clients.Group(groupName).SendAsync("AuthStateChanged", new
             {
                 IsAuthenticated = isAuthenticated,
                 ChangedAt = DateTime.UtcNow
             });
-            
+
             logger.LogDebug("Auth state change notification sent successfully to group {GroupName}", groupName);
         }
         catch (Exception ex)

@@ -10,7 +10,7 @@ namespace AspireDeezNuts.ApiService.Controllers;
 [ApiController]
 [Route("api/v1/[controller]")]
 public class PostsController(
-    IPostRepository postRepository, 
+    IPostRepository postRepository,
     UserManager<IdentityUser> userManager,
     ILogger<PostsController> logger) : ControllerBase
 {

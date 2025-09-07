@@ -22,6 +22,6 @@ public class JsonSerializationService : IJsonSerializationService
     }
 
     public T? Deserialize<T>(string json) => JsonSerializer.Deserialize<T>(json, CamelCaseOptions);
-    
+
     public string Serialize<T>(T value) => JsonSerializer.Serialize(value, CamelCaseOptions);
 }

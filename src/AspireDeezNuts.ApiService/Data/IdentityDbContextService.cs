@@ -7,36 +7,17 @@ using AspireDeezNuts.Shared.Models;
 namespace AspireDeezNuts.ApiService.Data;
 
 // Service that manages the appropriate DbContext based on operation type
-public class IdentityDbContextService : IIdentityDbService
+public class IdentityDbContextService(
+    IOptions<DatabaseOptions> databaseOptions,
+    IOptions<ConnectionStrings> connectionStrings,
+    IOptions<SeedDataOptions> seedDataOptions,
+    ILogger<IdentityDbContextService> logger,
+    UserManager<IdentityUser> userManager,
+    RoleManager<IdentityRole> roleManager) : IIdentityDbService
 {
-    private readonly IServiceProvider _serviceProvider;
-    private readonly IConfiguration _configuration;
-    private readonly DatabaseOptions _databaseOptions;
-    private readonly ConnectionStrings _connectionStrings;
-    private readonly SeedDataOptions _seedDataOptions;
-    private readonly ILogger<IdentityDbContextService> _logger;
-    private readonly UserManager<IdentityUser> _userManager;
-    private readonly RoleManager<IdentityRole> _roleManager;
-
-    public IdentityDbContextService(
-        IServiceProvider serviceProvider,
-        IConfiguration configuration,
-        IOptions<DatabaseOptions> databaseOptions,
-        IOptions<ConnectionStrings> connectionStrings,
-        IOptions<SeedDataOptions> seedDataOptions,
-        ILogger<IdentityDbContextService> logger,
-        UserManager<IdentityUser> userManager,
-        RoleManager<IdentityRole> roleManager)
-    {
-        _serviceProvider = serviceProvider;
-        _configuration = configuration;
-        _databaseOptions = databaseOptions.Value;
-        _connectionStrings = connectionStrings.Value;
-        _seedDataOptions = seedDataOptions.Value;
-        _logger = logger;
-        _userManager = userManager;
-        _roleManager = roleManager;
-    }
+    private readonly DatabaseOptions _databaseOptions = databaseOptions.Value;
+    private readonly ConnectionStrings _connectionStrings = connectionStrings.Value;
+    private readonly SeedDataOptions _seedDataOptions = seedDataOptions.Value;
 
     // Read operations use ReadOnlyDbContext
     public async Task<IdentityUser?> FindUserByIdAsync(string userId, CancellationToken cancellationToken = default)
@@ -65,58 +46,58 @@ public class IdentityDbContextService : IIdentityDbService
 
     public async Task<IList<IdentityUser>> GetUsersInRoleAsync(string roleName, CancellationToken cancellationToken = default)
     {
-        return await _userManager.GetUsersInRoleAsync(roleName);
+        return await userManager.GetUsersInRoleAsync(roleName);
     }
 
     public async Task<IList<string>> GetRolesAsync(IdentityUser user, CancellationToken cancellationToken = default)
     {
-        return await _userManager.GetRolesAsync(user);
+        return await userManager.GetRolesAsync(user);
     }
 
     public async Task<bool> IsInRoleAsync(IdentityUser user, string role, CancellationToken cancellationToken = default)
     {
-        return await _userManager.IsInRoleAsync(user, role);
+        return await userManager.IsInRoleAsync(user, role);
     }
 
     public async Task<bool> RoleExistsAsync(string roleName, CancellationToken cancellationToken = default)
     {
-        return await _roleManager.RoleExistsAsync(roleName);
+        return await roleManager.RoleExistsAsync(roleName);
     }
 
     public async Task<bool> CheckPasswordAsync(IdentityUser user, string password, CancellationToken cancellationToken = default)
     {
-        return await _userManager.CheckPasswordAsync(user, password);
+        return await userManager.CheckPasswordAsync(user, password);
     }
 
     // Write operations use ReadWriteDbContext
     public async Task<IdentityResult> CreateUserAsync(IdentityUser user, string password, CancellationToken cancellationToken = default)
     {
-        return await _userManager.CreateAsync(user, password);
+        return await userManager.CreateAsync(user, password);
     }
 
     public async Task<IdentityResult> UpdateUserAsync(IdentityUser user, CancellationToken cancellationToken = default)
     {
-        return await _userManager.UpdateAsync(user);
+        return await userManager.UpdateAsync(user);
     }
 
     public async Task<IdentityResult> DeleteUserAsync(IdentityUser user, CancellationToken cancellationToken = default)
     {
-        return await _userManager.DeleteAsync(user);
+        return await userManager.DeleteAsync(user);
     }
 
     public async Task<IdentityResult> AddToRoleAsync(IdentityUser user, string role, CancellationToken cancellationToken = default)
     {
-        return await _userManager.AddToRoleAsync(user, role);
+        return await userManager.AddToRoleAsync(user, role);
     }
 
     public async Task<IdentityResult> RemoveFromRoleAsync(IdentityUser user, string role, CancellationToken cancellationToken = default)
     {
-        return await _userManager.RemoveFromRoleAsync(user, role);
+        return await userManager.RemoveFromRoleAsync(user, role);
     }
 
     public async Task<IdentityResult> CreateRoleAsync(string roleName, CancellationToken cancellationToken = default)
     {
-        return await _roleManager.CreateAsync(new IdentityRole(roleName));
+        return await roleManager.CreateAsync(new IdentityRole(roleName));
     }
 
     // Migration operations use MigrationDbContext
@@ -124,7 +105,7 @@ public class IdentityDbContextService : IIdentityDbService
     {
         await using var context = GetMigrationContext();
         await context.Database.MigrateAsync(cancellationToken);
-        _logger.LogInformation("Database migration completed successfully");
+        logger.LogInformation("Database migration completed successfully");
     }
 
     public async Task<bool> CanConnectAsync(CancellationToken cancellationToken = default)
@@ -136,7 +117,7 @@ public class IdentityDbContextService : IIdentityDbService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Cannot connect to database");
+            logger.LogError(ex, "Cannot connect to database");
             return false;
         }
     }
@@ -145,28 +126,28 @@ public class IdentityDbContextService : IIdentityDbService
     {
         // Seed data uses ReadWrite context
         await using var context = GetReadWriteContext();
-        
+
         // Ensure roles exist
-        if (!await _roleManager.RoleExistsAsync("Admin"))
+        if (!await roleManager.RoleExistsAsync("Admin"))
         {
-            await _roleManager.CreateAsync(new IdentityRole("Admin"));
-            _logger.LogInformation("Created Admin role");
+            await roleManager.CreateAsync(new IdentityRole("Admin"));
+            logger.LogInformation("Created Admin role");
         }
-        
-        if (!await _roleManager.RoleExistsAsync("User"))
+
+        if (!await roleManager.RoleExistsAsync("User"))
         {
-            await _roleManager.CreateAsync(new IdentityRole("User"));
-            _logger.LogInformation("Created User role");
+            await roleManager.CreateAsync(new IdentityRole("User"));
+            logger.LogInformation("Created User role");
         }
 
         // Seed admin user from configuration if available
-        if (_seedDataOptions.InitialAdmin != null && 
-            !string.IsNullOrEmpty(_seedDataOptions.InitialAdmin.Email) && 
+        if (_seedDataOptions.InitialAdmin != null &&
+            !string.IsNullOrEmpty(_seedDataOptions.InitialAdmin.Email) &&
             !string.IsNullOrEmpty(_seedDataOptions.InitialAdmin.Password))
         {
             var adminEmail = _seedDataOptions.InitialAdmin.Email;
-            var existingAdmin = await _userManager.FindByEmailAsync(adminEmail);
-            
+            var existingAdmin = await userManager.FindByEmailAsync(adminEmail);
+
             if (existingAdmin == null)
             {
                 var adminUser = new IdentityUser
@@ -175,33 +156,33 @@ public class IdentityDbContextService : IIdentityDbService
                     Email = adminEmail,
                     EmailConfirmed = true
                 };
-                
-                var result = await _userManager.CreateAsync(adminUser, _seedDataOptions.InitialAdmin.Password);
+
+                var result = await userManager.CreateAsync(adminUser, _seedDataOptions.InitialAdmin.Password);
                 if (result.Succeeded)
                 {
-                    await _userManager.AddToRoleAsync(adminUser, "Admin");
-                    _logger.LogInformation("Seeded admin user: {Email}", adminEmail);
+                    await userManager.AddToRoleAsync(adminUser, "Admin");
+                    logger.LogInformation("Seeded admin user: {Email}", adminEmail);
                 }
                 else
                 {
-                    _logger.LogWarning("Failed to create admin user {Email}: {Errors}", 
+                    logger.LogWarning("Failed to create admin user {Email}: {Errors}",
                         adminEmail, string.Join(", ", result.Errors.Select(e => e.Description)));
                 }
             }
             else
             {
-                _logger.LogInformation("Admin user {Email} already exists", adminEmail);
+                logger.LogInformation("Admin user {Email} already exists", adminEmail);
             }
         }
 
         // Seed regular user from configuration if available
-        if (_seedDataOptions.InitialUser != null && 
-            !string.IsNullOrEmpty(_seedDataOptions.InitialUser.Email) && 
+        if (_seedDataOptions.InitialUser != null &&
+            !string.IsNullOrEmpty(_seedDataOptions.InitialUser.Email) &&
             !string.IsNullOrEmpty(_seedDataOptions.InitialUser.Password))
         {
             var userEmail = _seedDataOptions.InitialUser.Email;
-            var existingUser = await _userManager.FindByEmailAsync(userEmail);
-            
+            var existingUser = await userManager.FindByEmailAsync(userEmail);
+
             if (existingUser == null)
             {
                 var regularUser = new IdentityUser
@@ -210,32 +191,32 @@ public class IdentityDbContextService : IIdentityDbService
                     Email = userEmail,
                     EmailConfirmed = true
                 };
-                
-                var result = await _userManager.CreateAsync(regularUser, _seedDataOptions.InitialUser.Password);
+
+                var result = await userManager.CreateAsync(regularUser, _seedDataOptions.InitialUser.Password);
                 if (result.Succeeded)
                 {
-                    await _userManager.AddToRoleAsync(regularUser, "User");
-                    _logger.LogInformation("Seeded regular user: {Email}", userEmail);
+                    await userManager.AddToRoleAsync(regularUser, "User");
+                    logger.LogInformation("Seeded regular user: {Email}", userEmail);
                 }
                 else
                 {
-                    _logger.LogWarning("Failed to create regular user {Email}: {Errors}", 
+                    logger.LogWarning("Failed to create regular user {Email}: {Errors}",
                         userEmail, string.Join(", ", result.Errors.Select(e => e.Description)));
                 }
             }
             else
             {
-                _logger.LogInformation("Regular user {Email} already exists", userEmail);
+                logger.LogInformation("Regular user {Email} already exists", userEmail);
             }
         }
 
         // Fallback: Create default admin if no seed data is configured
-        if (_seedDataOptions.InitialAdmin == null || 
+        if (_seedDataOptions.InitialAdmin == null ||
             string.IsNullOrEmpty(_seedDataOptions.InitialAdmin.Email))
         {
             var defaultAdminEmail = "admin@example.com";
-            var existingAdmin = await _userManager.FindByEmailAsync(defaultAdminEmail);
-            
+            var existingAdmin = await userManager.FindByEmailAsync(defaultAdminEmail);
+
             if (existingAdmin == null)
             {
                 var adminUser = new IdentityUser
@@ -244,12 +225,12 @@ public class IdentityDbContextService : IIdentityDbService
                     Email = defaultAdminEmail,
                     EmailConfirmed = true
                 };
-                
-                var result = await _userManager.CreateAsync(adminUser, "Admin123!");
+
+                var result = await userManager.CreateAsync(adminUser, "Admin123!");
                 if (result.Succeeded)
                 {
-                    await _userManager.AddToRoleAsync(adminUser, "Admin");
-                    _logger.LogInformation("Created fallback admin user: {Email}", defaultAdminEmail);
+                    await userManager.AddToRoleAsync(adminUser, "Admin");
+                    logger.LogInformation("Created fallback admin user: {Email}", defaultAdminEmail);
                 }
             }
         }
@@ -285,13 +266,13 @@ public class IdentityDbContextService : IIdentityDbService
             optionsBuilder.EnableSensitiveDataLogging();
         }
 
-        optionsBuilder.LogTo(message => _logger.LogDebug(message));
+        optionsBuilder.LogTo(message => logger.LogDebug(message));
 
         if (_databaseOptions.UseInMemory)
         {
             var databaseName = "AspireDeezNutsIdentity";
             optionsBuilder.UseInMemoryDatabase(databaseName);
-            _logger.LogInformation("Using InMemory database: {DatabaseName}", databaseName);
+            logger.LogInformation("Using InMemory database: {DatabaseName}", databaseName);
         }
         else if (_databaseOptions.UsePostgreSql)
         {
@@ -316,20 +297,20 @@ public class IdentityDbContextService : IIdentityDbService
                             errorCodesToAdd: null);
                     }
                 });
-                _logger.LogInformation("Using PostgreSQL database with {ConnectionType} connection", connectionType);
+                logger.LogInformation("Using PostgreSQL database with {ConnectionType} connection", connectionType);
             }
             else
             {
                 var databaseName = "AspireDeezNutsIdentity";
                 optionsBuilder.UseInMemoryDatabase(databaseName);
-                _logger.LogWarning("No PostgreSQL connection string found, falling back to InMemory database");
+                logger.LogWarning("No PostgreSQL connection string found, falling back to InMemory database");
             }
         }
         else
         {
             var databaseName = "AspireDeezNutsIdentity";
             optionsBuilder.UseInMemoryDatabase(databaseName);
-            _logger.LogInformation("Using InMemory database: {DatabaseName}", databaseName);
+            logger.LogInformation("Using InMemory database: {DatabaseName}", databaseName);
         }
     }
 }

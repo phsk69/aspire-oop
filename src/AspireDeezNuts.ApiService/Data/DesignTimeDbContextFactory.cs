@@ -13,7 +13,7 @@ public class AppMigrationDbContextFactory : IDesignTimeDbContextFactory<AppMigra
     {
         // Create service collection for DI
         var services = new ServiceCollection();
-        
+
         // Add logging
         services.AddLogging(builder =>
         {
@@ -40,7 +40,7 @@ public class AppMigrationDbContextFactory : IDesignTimeDbContextFactory<AppMigra
         // Configure options like Program.cs
         services.Configure<DatabaseOptions>(configuration.GetSection(DatabaseOptions.Database));
         services.Configure<ConnectionStrings>(configuration.GetSection(ConnectionStrings.Section));
-        
+
         var serviceProvider = services.BuildServiceProvider();
         var logger = serviceProvider.GetRequiredService<ILogger<AppMigrationDbContextFactory>>();
         var databaseOptions = serviceProvider.GetRequiredService<IOptions<DatabaseOptions>>().Value;
@@ -52,15 +52,15 @@ public class AppMigrationDbContextFactory : IDesignTimeDbContextFactory<AppMigra
         logger.LogInformation("UsePostgreSql: {UsePostgreSql}", databaseOptions.UsePostgreSql);
 
         var optionsBuilder = new DbContextOptionsBuilder<AppMigrationDbContext>();
-        
+
         if (databaseOptions.UsePostgreSql)
         {
             var connectionString = connectionStrings.GetMigrationConnectionString();
-            logger.LogInformation("Migration Connection String: {HasConnection}", 
+            logger.LogInformation("Migration Connection String: {HasConnection}",
                 string.IsNullOrEmpty(connectionString) ? "NULL/EMPTY" : "Found");
-            logger.LogInformation("Connection String Value: {ConnectionString}", 
+            logger.LogInformation("Connection String Value: {ConnectionString}",
                 string.IsNullOrEmpty(connectionString) ? "NULL" : connectionString.Substring(0, Math.Min(50, connectionString.Length)) + "...");
-            
+
             if (!string.IsNullOrEmpty(connectionString) && connectionString != "DataSource=:memory:")
             {
                 optionsBuilder.UseNpgsql(connectionString, npgsqlOptions =>
@@ -97,7 +97,7 @@ public class AppMigrationDbContextFactory : IDesignTimeDbContextFactory<AppMigra
             logger.LogError("InMemory database provider is not supported for migrations");
             throw new InvalidOperationException("InMemory database provider is not supported for migrations. Please set Database:Provider to 'PostgreSQL' in appsettings.json.");
         }
-        
+
         if (databaseOptions.EnableSensitiveDataLogging)
         {
             optionsBuilder.EnableSensitiveDataLogging();

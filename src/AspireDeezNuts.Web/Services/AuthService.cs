@@ -79,7 +79,7 @@ public class AuthService(HttpClient httpClient, ILogger<AuthService> logger, IJs
             {
                 cachedRefreshToken = httpContext.Items["CachedRefreshToken"] as string;
             }
-            
+
             // If no cached token, get from user claims
             if (string.IsNullOrEmpty(cachedRefreshToken) && httpContext?.User?.Identity?.IsAuthenticated == true)
             {
@@ -89,9 +89,9 @@ public class AuthService(HttpClient httpClient, ILogger<AuthService> logger, IJs
             // Attempt to revoke the refresh token on the server
             if (!string.IsNullOrEmpty(cachedRefreshToken))
             {
-                await _httpClient.PostAsJsonAsync("api/v1/auth/logout", new LogoutRequest 
-                { 
-                    RefreshToken = cachedRefreshToken 
+                await _httpClient.PostAsJsonAsync("api/v1/auth/logout", new LogoutRequest
+                {
+                    RefreshToken = cachedRefreshToken
                 });
             }
         }
@@ -124,7 +124,7 @@ public class AuthService(HttpClient httpClient, ILogger<AuthService> logger, IJs
             {
                 return await Task.FromResult(cachedToken);
             }
-            
+
             // Otherwise, get from current user claims in cookie
             if (httpContext.User?.Identity?.IsAuthenticated == true)
             {
@@ -135,7 +135,7 @@ public class AuthService(HttpClient httpClient, ILogger<AuthService> logger, IJs
                 }
             }
         }
-        
+
         return await Task.FromResult<string?>(null);
     }
 
@@ -158,10 +158,10 @@ public class AuthService(HttpClient httpClient, ILogger<AuthService> logger, IJs
         try
         {
             _logger.LogInformation("Attempting to refresh JWT token using refresh token");
-            
+
             // Get the refresh token from current user claims in the cookie
             var currentRefreshToken = GetCurrentRefreshToken();
-            
+
             if (string.IsNullOrEmpty(currentRefreshToken))
             {
                 _logger.LogWarning("No refresh token available in current user claims for refresh");
@@ -192,7 +192,7 @@ public class AuthService(HttpClient httpClient, ILogger<AuthService> logger, IJs
                         httpContext.Items["CachedRefreshToken"] = refreshResponse.RefreshToken;
                         httpContext.Items["CachedLoginResponse"] = refreshResponse;
                     }
-                    
+
                     // Force update the authentication state with new tokens first
                     var currentUser = _httpContextAccessor.HttpContext?.User;
                     if (currentUser != null && _authStateProvider is CustomRevalidatingAuthenticationStateProvider customProvider)
@@ -200,13 +200,13 @@ public class AuthService(HttpClient httpClient, ILogger<AuthService> logger, IJs
                         await customProvider.UpdateAuthenticationStateWithNewTokens(refreshResponse, currentUser);
                         _logger.LogInformation("Authentication state provider updated with new tokens");
                     }
-                    
+
                     // Try to update the authentication cookie for manual refreshes (if possible)
                     await UpdateCookieAuthenticationAsync(refreshResponse);
-                    
+
                     // Notify connected clients about the token refresh via SignalR
                     await NotifyTokenRefreshViaSignalR(refreshResponse);
-                    
+
                     _logger.LogInformation("Token refreshed successfully - tokens cached, auth state updated, and SignalR notification sent");
                     return refreshResponse.AccessToken;
                 }
@@ -238,7 +238,7 @@ public class AuthService(HttpClient httpClient, ILogger<AuthService> logger, IJs
         try
         {
             _logger.LogInformation("Attempting to refresh JWT token using provided refresh token");
-            
+
             var refreshRequest = new RefreshTokenRequest
             {
                 RefreshToken = refreshToken
@@ -276,7 +276,7 @@ public class AuthService(HttpClient httpClient, ILogger<AuthService> logger, IJs
         try
         {
             _logger.LogInformation("Attempting to refresh both access and refresh tokens using provided refresh token");
-            
+
             var refreshRequest = new RefreshTokenRequest
             {
                 RefreshToken = refreshToken
@@ -322,7 +322,7 @@ public class AuthService(HttpClient httpClient, ILogger<AuthService> logger, IJs
                 _logger.LogInformation("Using cached refresh token from recent refresh");
                 return cachedRefreshToken;
             }
-            
+
             // Otherwise, get from current user claims in cookie
             if (httpContext.User?.Identity?.IsAuthenticated == true)
             {
@@ -334,7 +334,7 @@ public class AuthService(HttpClient httpClient, ILogger<AuthService> logger, IJs
                 }
                 else
                 {
-                    _logger.LogWarning("No refresh_token claim found in current user. Available claims: {Claims}", 
+                    _logger.LogWarning("No refresh_token claim found in current user. Available claims: {Claims}",
                         string.Join(", ", httpContext.User.Claims.Select(c => c.Type)));
                 }
             }
@@ -347,7 +347,7 @@ public class AuthService(HttpClient httpClient, ILogger<AuthService> logger, IJs
         {
             _logger.LogWarning("HttpContext is null");
         }
-        
+
         return null;
     }
 
@@ -374,21 +374,21 @@ public class AuthService(HttpClient httpClient, ILogger<AuthService> logger, IJs
             // Parse the new JWT token to get updated claims
             var handler = new JwtSecurityTokenHandler();
             var jwtToken = handler.ReadJwtToken(newTokens.AccessToken);
-            
+
             // Create new claims list with updated tokens
             var claims = jwtToken.Claims.ToList();
             claims.Add(new Claim("access_token", newTokens.AccessToken));
-            
+
             // Add the new refresh token
             if (!string.IsNullOrEmpty(newTokens.RefreshToken))
             {
                 claims.Add(new Claim("refresh_token", newTokens.RefreshToken));
             }
-            
+
             // Preserve essential claims from current user that might not be in JWT
             var existingNameClaim = currentUser.FindFirst(ClaimTypes.Name);
             var existingEmailClaim = currentUser.FindFirst(ClaimTypes.Email);
-            
+
             if (existingNameClaim != null && !claims.Any(c => c.Type == ClaimTypes.Name))
             {
                 claims.Add(existingNameClaim);
@@ -401,7 +401,7 @@ public class AuthService(HttpClient httpClient, ILogger<AuthService> logger, IJs
             // Create new principal and sign in to update the cookie
             var identity = new ClaimsIdentity(claims, currentUser.Identity!.AuthenticationType);
             var newPrincipal = new ClaimsPrincipal(identity);
-            
+
             await httpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, newPrincipal);
             _logger.LogInformation("Authentication cookie updated with new tokens in AuthService");
         }
@@ -428,7 +428,7 @@ public class AuthService(HttpClient httpClient, ILogger<AuthService> logger, IJs
                 await _authStateNotificationService.NotifyTokenRefreshedAsync(
                     tokenInfo.UserId ?? httpContext.User.Identity.Name ?? "unknown",
                     tokenInfo);
-                
+
                 _logger.LogInformation("SignalR notification sent for token refresh to user: {UserId}", tokenInfo.UserId);
             }
         }

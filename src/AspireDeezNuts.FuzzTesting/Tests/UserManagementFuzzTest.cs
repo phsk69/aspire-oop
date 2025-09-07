@@ -12,11 +12,11 @@ public class UserManagementFuzzTest(
     public async Task<FuzzTestResult> ExecuteAsync(CancellationToken cancellationToken)
     {
         var client = httpClientFactory.CreateClient("ApiService");
-        
+
         // Set the base address using service discovery format
         // This will be resolved by Aspire's service discovery to the actual API URL
         client.BaseAddress = new Uri("https+http://aspire-deez-nuts-api");
-        
+
         var iterations = 0;
         var errors = new List<string>();
 
@@ -31,13 +31,13 @@ public class UserManagementFuzzTest(
 
             // Test GET users with various query parameters
             iterations += await FuzzGetUsersEndpointAsync(client, errors, cancellationToken);
-            
+
             // Test GET user by ID with various IDs
             iterations += await FuzzGetUserByIdEndpointAsync(client, errors, cancellationToken);
-            
+
             // Test PUT update user with malformed data
             iterations += await FuzzUpdateUserEndpointAsync(client, errors, cancellationToken);
-            
+
             // Test DELETE user with various IDs
             iterations += await FuzzDeleteUserEndpointAsync(client, errors, cancellationToken);
 
@@ -62,7 +62,7 @@ public class UserManagementFuzzTest(
             // Try to login with default admin credentials (should be configured)
             var loginRequest = new { Username = "admin", Password = "Admin123!" };
             var response = await client.PostAsJsonAsync("/api/v1/auth/login", loginRequest, cancellationToken);
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var content = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -77,7 +77,7 @@ public class UserManagementFuzzTest(
         {
             logger.LogWarning(ex, "Could not obtain admin token for testing");
         }
-        
+
         return null;
     }
 
@@ -92,11 +92,11 @@ public class UserManagementFuzzTest(
                 break;
 
             iterations++;
-            
+
             try
             {
                 var response = await client.GetAsync($"/api/v1/users?{param}", cancellationToken);
-                
+
                 if ((int)response.StatusCode >= 500)
                 {
                     errors.Add($"Server error on GET users with params: {param}");
@@ -126,11 +126,11 @@ public class UserManagementFuzzTest(
                 break;
 
             iterations++;
-            
+
             try
             {
                 var response = await client.GetAsync($"/api/v1/users/{id}", cancellationToken);
-                
+
                 if ((int)response.StatusCode >= 500)
                 {
                     errors.Add($"Server error on GET user with ID: {id}");
@@ -156,11 +156,11 @@ public class UserManagementFuzzTest(
                 break;
 
             iterations++;
-            
+
             try
             {
                 var response = await client.PutAsJsonAsync($"/api/v1/users/{data.id}", data.userData, cancellationToken);
-                
+
                 if ((int)response.StatusCode >= 500)
                 {
                     errors.Add($"Server error on PUT user with data: {JsonSerializer.Serialize(data)}");
@@ -186,11 +186,11 @@ public class UserManagementFuzzTest(
                 break;
 
             iterations++;
-            
+
             try
             {
                 var response = await client.DeleteAsync($"/api/v1/users/{id}", cancellationToken);
-                
+
                 if ((int)response.StatusCode >= 500)
                 {
                     errors.Add($"Server error on DELETE user with ID: {id}");
@@ -286,53 +286,60 @@ public class UserManagementFuzzTest(
     private List<(string id, object userData)> GenerateFuzzUserData()
     {
         var fuzzData = new List<(string, object)>();
-        
+
         // Various malformed user objects
-        fuzzData.Add(("1", new { 
+        fuzzData.Add(("1", new
+        {
             Username = "<script>alert('XSS')</script>",
             Email = "test@test.com",
             Roles = new[] { "Admin", "'; DROP TABLE users; --" }
         }));
-        
-        fuzzData.Add(("2", new { 
+
+        fuzzData.Add(("2", new
+        {
             Username = new string('A', 10000),
             Email = new string('B', 10000),
             Roles = new string[1000]
         }));
-        
-        fuzzData.Add(("3", new {
+
+        fuzzData.Add(("3", new
+        {
             Username = "user\0name",
             Email = "test\r\n@test.com",
             Roles = new[] { "\0", "\r\n" }
         }));
-        
-        fuzzData.Add(("4", new {
+
+        fuzzData.Add(("4", new
+        {
             Username = "$(whoami)",
             Email = "`id`@test.com",
             Password = "../../../etc/passwd"
         }));
-        
-        fuzzData.Add(("5", new {
+
+        fuzzData.Add(("5", new
+        {
             Username = "🔥💀🔥",
             Email = "用户@测试.com",
             Roles = new[] { "🔒", "🔑" }
         }));
-        
+
         // Nested object injection
-        fuzzData.Add(("6", new {
+        fuzzData.Add(("6", new
+        {
             Username = "test",
             Email = "test@test.com",
             __proto__ = new { isAdmin = true },
             constructor = new { prototype = new { isAdmin = true } }
         }));
-        
+
         // Type confusion
-        fuzzData.Add(("7", new {
+        fuzzData.Add(("7", new
+        {
             Username = 12345,
             Email = true,
             Roles = "NotAnArray"
         }));
-        
+
         return fuzzData;
     }
 }

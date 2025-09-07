@@ -7,17 +7,17 @@ public class FuzzTestRunner(
     public async Task RunTestCycleAsync(CancellationToken cancellationToken)
     {
         var tasks = new List<Task<FuzzTestResult>>();
-        
+
         foreach (var test in fuzzTests)
         {
             if (cancellationToken.IsCancellationRequested)
                 break;
-                
+
             tasks.Add(RunTestAsync(test, cancellationToken));
         }
 
         var results = await Task.WhenAll(tasks);
-        
+
         // Update health check metrics
         var totalTests = results.Length;
         var failedTests = results.Count(r => !r.IsSuccess);
@@ -30,7 +30,7 @@ public class FuzzTestRunner(
         {
             logger.LogInformation("Starting fuzz test: {TestName}", test.Name);
             var result = await test.ExecuteAsync(cancellationToken);
-            
+
             if (result.IsSuccess)
             {
                 logger.LogInformation("Fuzz test {TestName} completed successfully. Iterations: {Iterations}",
@@ -41,7 +41,7 @@ public class FuzzTestRunner(
                 logger.LogWarning("Fuzz test {TestName} found issues: {Issues}",
                     test.Name, result.ErrorMessage);
             }
-            
+
             return result;
         }
         catch (Exception ex)

@@ -11,11 +11,11 @@ public class AuthenticationFuzzTest(
     public async Task<FuzzTestResult> ExecuteAsync(CancellationToken cancellationToken)
     {
         var client = httpClientFactory.CreateClient("ApiService");
-        
+
         // Set the base address using service discovery format
         // This will be resolved by Aspire's service discovery to the actual API URL
         client.BaseAddress = new Uri("https+http://aspire-deez-nuts-api");
-        
+
         var iterations = 0;
         var errors = new List<string>();
 
@@ -23,10 +23,10 @@ public class AuthenticationFuzzTest(
         {
             // Test login endpoint with various fuzzing inputs
             iterations += await FuzzLoginEndpointAsync(client, errors, cancellationToken);
-            
+
             // Test register endpoint with various fuzzing inputs
             iterations += await FuzzRegisterEndpointAsync(client, errors, cancellationToken);
-            
+
             // Test refresh endpoint with malformed tokens
             iterations += await FuzzRefreshEndpointAsync(client, errors, cancellationToken);
 
@@ -55,7 +55,7 @@ public class AuthenticationFuzzTest(
                 break;
 
             iterations++;
-            
+
             try
             {
                 var loginRequest = new
@@ -65,7 +65,7 @@ public class AuthenticationFuzzTest(
                 };
 
                 var response = await client.PostAsJsonAsync("/api/v1/auth/login", loginRequest, cancellationToken);
-                
+
                 // Check for unexpected status codes or crashes
                 if ((int)response.StatusCode >= 500)
                 {
@@ -97,7 +97,7 @@ public class AuthenticationFuzzTest(
                 break;
 
             iterations++;
-            
+
             try
             {
                 var registerRequest = new
@@ -108,7 +108,7 @@ public class AuthenticationFuzzTest(
                 };
 
                 var response = await client.PostAsJsonAsync("/api/v1/auth/register", registerRequest, cancellationToken);
-                
+
                 if ((int)response.StatusCode >= 500)
                 {
                     errors.Add($"Server error on register with input: {JsonSerializer.Serialize(registerRequest)}");
@@ -138,12 +138,12 @@ public class AuthenticationFuzzTest(
                 break;
 
             iterations++;
-            
+
             try
             {
                 var refreshRequest = new { RefreshToken = token };
                 var response = await client.PostAsJsonAsync("/api/v1/auth/refresh", refreshRequest, cancellationToken);
-                
+
                 if ((int)response.StatusCode >= 500)
                 {
                     errors.Add($"Server error on refresh with malformed token");

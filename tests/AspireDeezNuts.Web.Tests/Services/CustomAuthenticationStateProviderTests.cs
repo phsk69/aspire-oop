@@ -114,7 +114,7 @@ public class CustomAuthenticationStateProviderTests
         // Assert
         Assert.IsNotNull(state);
         Assert.IsFalse(state.User.Identity?.IsAuthenticated);
-        
+
         // Verify error was logged
         var errorLogs = _logger.LogEntries.Where(l => l.LogLevel == LogLevel.Error).ToList();
         Assert.IsGreaterThan(0, errorLogs.Count);
@@ -232,18 +232,18 @@ public class CustomAuthenticationStateProviderTests
         var token = CreateTestJwtToken("test@example.com", "user123", new[] { "Admin", "User" });
 
         // Act - Use reflection to call the private static method
-        var method = typeof(CustomAuthenticationStateProvider).GetMethod("ParseClaimsFromJwt", 
+        var method = typeof(CustomAuthenticationStateProvider).GetMethod("ParseClaimsFromJwt",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
         var claims = (IEnumerable<Claim>)method!.Invoke(null, new object[] { token })!;
 
         // Assert
         var claimsList = claims.ToList();
         Assert.IsGreaterThan(0, claimsList.Count);
-        
+
         var emailClaim = claimsList.FirstOrDefault(c => c.Type == "email" || c.Type == ClaimTypes.Email);
         Assert.IsNotNull(emailClaim);
         Assert.AreEqual("test@example.com", emailClaim.Value);
-        
+
         var roleClaims = claimsList.Where(c => c.Type == "role" || c.Type == ClaimTypes.Role).ToList();
         Assert.IsGreaterThanOrEqualTo(2, roleClaims.Count);
         Assert.IsTrue(roleClaims.Any(c => c.Value == "Admin"));

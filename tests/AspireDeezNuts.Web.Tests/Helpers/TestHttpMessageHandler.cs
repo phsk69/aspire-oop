@@ -18,13 +18,13 @@ public class TestHttpMessageHandler : HttpMessageHandler
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         _requests.Add(request);
-        
+
         var endpoint = request.RequestUri?.PathAndQuery ?? "";
-        
+
         if (_responses.TryGetValue(endpoint, out var setup))
         {
             var response = new HttpResponseMessage(setup.statusCode);
-            
+
             if (setup.response != null)
             {
                 var options = new JsonSerializerOptions
@@ -35,7 +35,7 @@ public class TestHttpMessageHandler : HttpMessageHandler
                 var json = JsonSerializer.Serialize(setup.response, options);
                 response.Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
             }
-            
+
             return Task.FromResult(response);
         }
 

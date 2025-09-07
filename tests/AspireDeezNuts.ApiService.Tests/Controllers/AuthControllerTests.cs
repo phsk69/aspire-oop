@@ -29,7 +29,7 @@ public class AuthControllerTests
             .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
             .AddJsonFile("appsettings.Development.secrets.json", optional: false, reloadOnChange: false)
             .Build();
-        
+
         // Create a single shared factory for all tests in this class
         // This ensures consistent JWT configuration across all test operations
         _sharedFactory = new WebApplicationFactory<Program>()
@@ -41,12 +41,12 @@ public class AuthControllerTests
                     config.Sources.Clear();
                     config.AddConfiguration(testConfig);
                 });
-                
+
                 builder.ConfigureServices(services =>
                 {
                     // Use a unique database name for each test method (based on timestamp and random guid)
                     var databaseName = $"TestDb_AuthController_{DateTimeOffset.UtcNow.Ticks}_{Guid.NewGuid()}";
-                    
+
                     // Remove the existing DbContext registration
                     var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppMigrationDbContext>));
                     if (descriptor != null)
@@ -66,7 +66,7 @@ public class AuthControllerTests
     {
         _client?.Dispose();
     }
-    
+
     [ClassCleanup(ClassCleanupBehavior.EndOfClass)]
     public static void ClassCleanup()
     {
@@ -92,7 +92,7 @@ public class AuthControllerTests
         var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
         var adminEmail = config["SeedData:InitialAdmin:Email"];
         var adminPassword = config["SeedData:InitialAdmin:Password"];
-        
+
         if (string.IsNullOrEmpty(adminEmail) || string.IsNullOrEmpty(adminPassword))
         {
             throw new InvalidOperationException("Admin credentials not found in configuration. Ensure appsettings.Development.secrets.json exists with SeedData:InitialAdmin section.");
@@ -101,13 +101,13 @@ public class AuthControllerTests
         // Get admin token using the seeded credentials
         var loginRequest = new { Email = adminEmail, Password = adminPassword };
         var response = await _client!.PostAsJsonAsync("/api/v1/auth/login", loginRequest, cancellationToken);
-        
+
         if (!response.IsSuccessStatusCode)
         {
             var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
             throw new InvalidOperationException($"Login failed with status {response.StatusCode}: {errorContent}. Using credentials: {adminEmail}");
         }
-        
+
         var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
         var loginResponse = JsonSerializer.Deserialize<LoginResponse>(responseContent);
         _adminToken = loginResponse?.AccessToken;
@@ -127,7 +127,7 @@ public class AuthControllerTests
             Role = "User"
         };
 
-        _client!.DefaultRequestHeaders.Authorization = 
+        _client!.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _adminToken);
 
         // Act
@@ -145,7 +145,7 @@ public class AuthControllerTests
         // Arrange
         var request = new { Password = "ValidPass123!", Role = "User" };
 
-        _client!.DefaultRequestHeaders.Authorization = 
+        _client!.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _adminToken);
 
         // Act
@@ -170,7 +170,7 @@ public class AuthControllerTests
             Role = "User"
         };
 
-        _client!.DefaultRequestHeaders.Authorization = 
+        _client!.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _adminToken);
 
         // Act
@@ -194,7 +194,7 @@ public class AuthControllerTests
             Role = "User"
         };
 
-        _client!.DefaultRequestHeaders.Authorization = 
+        _client!.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _adminToken);
 
         // Act
@@ -212,7 +212,7 @@ public class AuthControllerTests
         // Arrange
         var request = new { Email = "test@test.com", Role = "User" };
 
-        _client!.DefaultRequestHeaders.Authorization = 
+        _client!.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _adminToken);
 
         // Act
@@ -237,7 +237,7 @@ public class AuthControllerTests
             Role = "User"
         };
 
-        _client!.DefaultRequestHeaders.Authorization = 
+        _client!.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _adminToken);
 
         // Act
@@ -260,7 +260,7 @@ public class AuthControllerTests
             Role = "User"
         };
 
-        _client!.DefaultRequestHeaders.Authorization = 
+        _client!.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _adminToken);
 
         // Act
@@ -285,7 +285,7 @@ public class AuthControllerTests
             Role = "User"
         };
 
-        _client!.DefaultRequestHeaders.Authorization = 
+        _client!.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _adminToken);
 
         // Act
@@ -310,7 +310,7 @@ public class AuthControllerTests
             Role = "User"
         };
 
-        _client!.DefaultRequestHeaders.Authorization = 
+        _client!.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _adminToken);
 
         // Act
@@ -335,7 +335,7 @@ public class AuthControllerTests
             Role = "User"
         };
 
-        _client!.DefaultRequestHeaders.Authorization = 
+        _client!.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _adminToken);
 
         // Act
@@ -360,7 +360,7 @@ public class AuthControllerTests
             Role = "SuperAdmin"
         };
 
-        _client!.DefaultRequestHeaders.Authorization = 
+        _client!.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _adminToken);
 
         // Act
@@ -383,7 +383,7 @@ public class AuthControllerTests
             Role = null
         };
 
-        _client!.DefaultRequestHeaders.Authorization = 
+        _client!.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _adminToken);
 
         // Act
@@ -391,21 +391,21 @@ public class AuthControllerTests
 
         // Assert
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-        
+
         // Read the response to get the user ID (note: the controller returns lowercase field names)
         var responseText = await response.Content.ReadAsStringAsync(TestContext.CancellationTokenSource.Token);
         dynamic responseContent = System.Text.Json.JsonSerializer.Deserialize<dynamic>(responseText)!;
         var userIdElement = ((System.Text.Json.JsonElement)responseContent).GetProperty("userId");
         var userId = userIdElement.GetString();
         Assert.IsNotNull(userId, "Registration should return user ID");
-        
+
         // Add some delay to ensure the user is persisted
         await Task.Delay(100, TestContext.CancellationTokenSource.Token);
-        
+
         // Verify user has User role
         using var scope = _sharedFactory!.Services.CreateScope();
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
-        
+
         // Find user by ID
         var user = await userManager.FindByIdAsync(userId);
         Assert.IsNotNull(user, "User should have been created");
@@ -421,7 +421,7 @@ public class AuthControllerTests
         using var scope = _sharedFactory!.Services.CreateScope();
         var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
         var adminEmail = config["SeedData:InitialAdmin:Email"]!;
-        
+
         var request = new RegisterRequest
         {
             Email = adminEmail, // Already exists from seed
@@ -429,7 +429,7 @@ public class AuthControllerTests
             Role = "User"
         };
 
-        _client!.DefaultRequestHeaders.Authorization = 
+        _client!.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _adminToken);
 
         // Act
@@ -452,10 +452,10 @@ public class AuthControllerTests
             Role = "User"
         };
 
-        _client!.DefaultRequestHeaders.Authorization = 
+        _client!.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _adminToken);
         var registerResponse = await _client.PostAsJsonAsync("/api/v1/auth/register", regularUser, TestContext.CancellationTokenSource.Token);
-        
+
         // Ensure registration was successful
         Assert.AreEqual(HttpStatusCode.OK, registerResponse.StatusCode, "Failed to register regular user");
 
@@ -465,10 +465,10 @@ public class AuthControllerTests
         // Login as regular user
         var loginRequest = new { Email = "regular@test.com", Password = "RegularPass123!" };
         var loginResponse = await _client.PostAsJsonAsync("/api/v1/auth/login", loginRequest, TestContext.CancellationTokenSource.Token);
-        
+
         // Check if login was successful
         Assert.AreEqual(HttpStatusCode.OK, loginResponse.StatusCode, "Failed to login as regular user");
-        
+
         var loginContent = await loginResponse.Content.ReadFromJsonAsync<LoginResponse>(TestContext.CancellationTokenSource.Token);
         var userToken = loginContent?.AccessToken;
 
@@ -480,7 +480,7 @@ public class AuthControllerTests
             Role = "User"
         };
 
-        _client.DefaultRequestHeaders.Authorization = 
+        _client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", userToken);
 
         // Act
@@ -502,7 +502,7 @@ public class AuthControllerTests
         var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
         var adminEmail = config["SeedData:InitialAdmin:Email"]!;
         var adminPassword = config["SeedData:InitialAdmin:Password"]!;
-        
+
         var request = new LoginRequest
         {
             Email = adminEmail,
@@ -563,7 +563,7 @@ public class AuthControllerTests
         using var scope = _sharedFactory!.Services.CreateScope();
         var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
         var adminEmail = config["SeedData:InitialAdmin:Email"]!;
-        
+
         var request = new { Email = adminEmail };
 
         // Act
@@ -585,7 +585,7 @@ public class AuthControllerTests
     public async Task RefreshSimple_WithValidToken_ShouldReturnNewToken()
     {
         // Arrange - Use admin token
-        _client!.DefaultRequestHeaders.Authorization = 
+        _client!.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _adminToken);
 
         // Act
@@ -597,7 +597,7 @@ public class AuthControllerTests
         Assert.IsNotNull(content?.AccessToken);
         Assert.IsNotNull(content?.RefreshToken);
         Assert.IsGreaterThan(0, content.ExpiresIn);
-        
+
         // Verify the new token is different from the original
         Assert.AreNotEqual(_adminToken, content.AccessToken);
     }
@@ -619,7 +619,7 @@ public class AuthControllerTests
     public async Task RefreshSimple_WithInvalidToken_ShouldReturnUnauthorized()
     {
         // Arrange - Use invalid token
-        _client!.DefaultRequestHeaders.Authorization = 
+        _client!.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", "invalid.token.here");
 
         // Act
@@ -638,15 +638,15 @@ public class AuthControllerTests
         var adminEmail = config["SeedData:InitialAdmin:Email"]!;
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
         var tokenService = scope.ServiceProvider.GetRequiredService<AspireDeezNuts.ApiService.Services.ITokenService>();
-        
+
         var user = await userManager.FindByEmailAsync(adminEmail);
         Assert.IsNotNull(user);
-        
+
         // Generate token with very short expiry (this would require modifying token service for true expiry test)
         // For now, we'll just test the current flow
         var expiredToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2MDE0MjE2MDB9.invalid";
-        
-        _client!.DefaultRequestHeaders.Authorization = 
+
+        _client!.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", expiredToken);
 
         // Act
@@ -660,18 +660,18 @@ public class AuthControllerTests
     public async Task RefreshSimple_NewTokenShouldBeValidForAPIAccess()
     {
         // Arrange - Get new token via refresh
-        _client!.DefaultRequestHeaders.Authorization = 
+        _client!.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _adminToken);
 
         var refreshResponse = await _client.PostAsync("/api/v1/auth/refresh-simple", null, TestContext.CancellationTokenSource.Token);
         Assert.AreEqual(HttpStatusCode.OK, refreshResponse.StatusCode);
-        
+
         var refreshContent = await refreshResponse.Content.ReadFromJsonAsync<LoginResponse>(TestContext.CancellationTokenSource.Token);
         var newToken = refreshContent?.AccessToken;
         Assert.IsNotNull(newToken);
 
         // Act - Use new token to access protected endpoint
-        _client.DefaultRequestHeaders.Authorization = 
+        _client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", newToken);
 
         var testResponse = await _client.GetAsync("/api/v1/auth/test-admin", TestContext.CancellationTokenSource.Token);

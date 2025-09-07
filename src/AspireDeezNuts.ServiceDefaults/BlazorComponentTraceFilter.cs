@@ -60,14 +60,14 @@ public class BlazorComponentTraceFilter : BaseProcessor<Activity>
     private static bool ShouldFilterActivity(Activity activity)
     {
         // Filter by operation name
-        if (!string.IsNullOrEmpty(activity.OperationName) && 
+        if (!string.IsNullOrEmpty(activity.OperationName) &&
             FilteredOperations.Contains(activity.OperationName))
         {
             return true;
         }
 
         // Filter by activity source name
-        if (activity.Source != null && 
+        if (activity.Source != null &&
             FilteredActivitySources.Contains(activity.Source.Name))
         {
             return true;
@@ -78,7 +78,7 @@ public class BlazorComponentTraceFilter : BaseProcessor<Activity>
         {
             if (activity.DisplayName.Contains("ComponentHub", StringComparison.OrdinalIgnoreCase) ||
                 activity.DisplayName.Contains("OnRenderCompleted", StringComparison.OrdinalIgnoreCase) ||
-                activity.DisplayName.Contains("Blazor", StringComparison.OrdinalIgnoreCase) && 
+                activity.DisplayName.Contains("Blazor", StringComparison.OrdinalIgnoreCase) &&
                 activity.DisplayName.Contains("Render", StringComparison.OrdinalIgnoreCase))
             {
                 return true;

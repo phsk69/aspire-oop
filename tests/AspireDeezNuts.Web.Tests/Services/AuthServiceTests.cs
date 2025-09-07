@@ -26,14 +26,14 @@ public class AuthServiceTests
         {
             BaseAddress = new Uri("https://test-api/")
         };
-        
+
         _httpContextAccessor = new TestHttpContextAccessor();
         _logger = new TestLogger<AuthService>();
         _jsonService = new TestJsonSerializationService();
         _authStateNotificationService = new TestAuthStateNotificationService();
         _tokenInfoService = new TestTokenInfoService();
         _authStateProvider = new TestCustomAuthenticationStateProvider();
-        
+
         _authService = new AuthService(
             _httpClient,
             _logger,
@@ -56,12 +56,12 @@ public class AuthServiceTests
     public async Task LoginAsync_WithValidCredentials_ReturnsSuccess()
     {
         // Arrange
-        var loginRequest = new LoginRequest 
-        { 
-            Email = "test@example.com", 
-            Password = "TestPass123!" 
+        var loginRequest = new LoginRequest
+        {
+            Email = "test@example.com",
+            Password = "TestPass123!"
         };
-        
+
         var loginResponse = new LoginResponse
         {
             AccessToken = "test-access-token",
@@ -78,13 +78,13 @@ public class AuthServiceTests
         // Assert
         Assert.IsTrue(result.Success);
         Assert.IsNull(result.ErrorMessage);
-        
+
         // Verify HTTP call was made
         Assert.HasCount(1, _httpMessageHandler.Requests);
         var request = _httpMessageHandler.Requests[0];
         Assert.AreEqual("/api/v1/auth/login", request.RequestUri?.PathAndQuery);
         Assert.AreEqual(HttpMethod.Post, request.Method);
-        
+
         // Verify tokens were cached in HTTP context
         Assert.AreEqual("test-access-token", _httpContextAccessor.HttpContext?.Items["CachedAccessToken"]);
         Assert.AreEqual("test-refresh-token", _httpContextAccessor.HttpContext?.Items["CachedRefreshToken"]);
@@ -94,10 +94,10 @@ public class AuthServiceTests
     public async Task LoginAsync_WithInvalidCredentials_ReturnsFailure()
     {
         // Arrange
-        var loginRequest = new LoginRequest 
-        { 
-            Email = "test@example.com", 
-            Password = "WrongPassword" 
+        var loginRequest = new LoginRequest
+        {
+            Email = "test@example.com",
+            Password = "WrongPassword"
         };
 
         _httpMessageHandler.SetupResponse("/api/v1/auth/login", HttpStatusCode.Unauthorized);
@@ -109,7 +109,7 @@ public class AuthServiceTests
         // Assert
         Assert.IsFalse(result.Success);
         Assert.AreEqual("Invalid email or password", result.ErrorMessage);
-        
+
         // Verify no tokens were cached
         Assert.IsNull(_httpContextAccessor.HttpContext?.Items["CachedAccessToken"]);
         Assert.IsNull(_httpContextAccessor.HttpContext?.Items["CachedRefreshToken"]);
@@ -119,10 +119,10 @@ public class AuthServiceTests
     public async Task LoginAsync_WithServerError_ReturnsGenericFailure()
     {
         // Arrange
-        var loginRequest = new LoginRequest 
-        { 
-            Email = "test@example.com", 
-            Password = "TestPass123!" 
+        var loginRequest = new LoginRequest
+        {
+            Email = "test@example.com",
+            Password = "TestPass123!"
         };
 
         _httpMessageHandler.SetupResponse("/api/v1/auth/login", HttpStatusCode.InternalServerError);
@@ -155,9 +155,9 @@ public class AuthServiceTests
     {
         // Arrange
         _httpContextAccessor.SetAuthenticatedUser(
-            "test@example.com", 
-            "user123", 
-            ["User"], 
+            "test@example.com",
+            "user123",
+            ["User"],
             "claim-token"
         );
 
@@ -186,13 +186,13 @@ public class AuthServiceTests
     {
         // Arrange
         _httpContextAccessor.SetAuthenticatedUser(
-            "test@example.com", 
-            "user123", 
-            ["User"], 
+            "test@example.com",
+            "user123",
+            ["User"],
             "access-token",
             "refresh-token"
         );
-        
+
         _httpMessageHandler.SetupResponse("/api/v1/auth/logout", HttpStatusCode.OK);
 
         // Act
@@ -203,7 +203,7 @@ public class AuthServiceTests
         var request = _httpMessageHandler.Requests[0];
         Assert.AreEqual("/api/v1/auth/logout", request.RequestUri?.PathAndQuery);
         Assert.AreEqual(HttpMethod.Post, request.Method);
-        
+
         // Verify cache was cleared
         Assert.IsFalse(_httpContextAccessor.HttpContext?.Items.ContainsKey("CachedAccessToken") ?? true);
         Assert.IsFalse(_httpContextAccessor.HttpContext?.Items.ContainsKey("CachedRefreshToken") ?? true);
@@ -221,13 +221,13 @@ public class AuthServiceTests
         };
 
         _httpContextAccessor.SetAuthenticatedUser(
-            "test@example.com", 
-            "user123", 
-            ["User"], 
+            "test@example.com",
+            "user123",
+            ["User"],
             "old-token",
             "refresh-token"
         );
-        
+
         _httpMessageHandler.SetupResponse("/api/v1/auth/refresh", HttpStatusCode.OK, refreshResponse);
 
         // Act
@@ -235,7 +235,7 @@ public class AuthServiceTests
 
         // Assert
         Assert.AreEqual("new-access-token", newToken);
-        
+
         // Verify new tokens were cached
         Assert.AreEqual("new-access-token", _httpContextAccessor.HttpContext?.Items["CachedAccessToken"]);
         Assert.AreEqual("new-refresh-token", _httpContextAccessor.HttpContext?.Items["CachedRefreshToken"]);
@@ -246,13 +246,13 @@ public class AuthServiceTests
     {
         // Arrange
         _httpContextAccessor.SetAuthenticatedUser(
-            "test@example.com", 
-            "user123", 
-            ["User"], 
+            "test@example.com",
+            "user123",
+            ["User"],
             "old-token",
             "expired-refresh-token"
         );
-        
+
         _httpMessageHandler.SetupResponse("/api/v1/auth/refresh", HttpStatusCode.Unauthorized);
 
         // Act
@@ -260,7 +260,7 @@ public class AuthServiceTests
 
         // Assert
         Assert.IsNull(newToken);
-        
+
         // Verify cache was cleared on failure
         Assert.IsFalse(_httpContextAccessor.HttpContext?.Items.ContainsKey("CachedAccessToken") ?? true);
         Assert.IsFalse(_httpContextAccessor.HttpContext?.Items.ContainsKey("CachedRefreshToken") ?? true);
@@ -271,11 +271,11 @@ public class AuthServiceTests
     {
         // Arrange
         _httpContextAccessor.SetAuthenticatedUser(
-            "test@example.com", 
-            "user123", 
-            ["User"], 
+            "test@example.com",
+            "user123",
+            ["User"],
             "access-token"
-            // No refresh token
+        // No refresh token
         );
 
         // Act
@@ -283,7 +283,7 @@ public class AuthServiceTests
 
         // Assert
         Assert.IsNull(newToken);
-        
+
         // Verify no HTTP calls were made
         Assert.IsEmpty(_httpMessageHandler.Requests);
     }

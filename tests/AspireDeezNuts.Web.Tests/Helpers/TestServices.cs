@@ -52,7 +52,7 @@ public class TestTokenInfoService : ITokenInfoService
     public TokenInfo? GetTokenInfo(string? token)
     {
         if (token == null) return null;
-        
+
         _tokenInfos.TryGetValue(token, out var tokenInfo);
         return tokenInfo ?? new TokenInfo
         {
@@ -154,7 +154,7 @@ public class TestNavigationManager : NavigationManager
     {
         var baseUri = "https://localhost/";
         var absoluteUri = uri.StartsWith("http") ? uri : new Uri(new Uri(baseUri), uri).ToString();
-        
+
         // Use reflection to set the Uri property
         var uriProperty = typeof(NavigationManager).GetProperty("Uri");
         uriProperty?.SetValue(this, absoluteUri);
@@ -169,15 +169,15 @@ public class TestNavigationManager : NavigationManager
 public class TestToastService : IToastService
 {
     public readonly List<ToastMessage> ToastMessages = [];
-    
+
     public event Action<ToastMessage>? OnShow;
 
     public void ShowSuccess(string message, string? title = null)
     {
-        var toast = new ToastMessage 
-        { 
-            Message = message, 
-            Title = title ?? "Success", 
+        var toast = new ToastMessage
+        {
+            Message = message,
+            Title = title ?? "Success",
             Type = ToastType.Success,
             AutoHide = true
         };
@@ -187,10 +187,10 @@ public class TestToastService : IToastService
 
     public void ShowInfo(string message, string? title = null)
     {
-        var toast = new ToastMessage 
-        { 
-            Message = message, 
-            Title = title ?? "Information", 
+        var toast = new ToastMessage
+        {
+            Message = message,
+            Title = title ?? "Information",
             Type = ToastType.Info,
             AutoHide = true
         };
@@ -200,10 +200,10 @@ public class TestToastService : IToastService
 
     public void ShowWarning(string message, string? title = null)
     {
-        var toast = new ToastMessage 
-        { 
-            Message = message, 
-            Title = title ?? "Warning", 
+        var toast = new ToastMessage
+        {
+            Message = message,
+            Title = title ?? "Warning",
             Type = ToastType.Warning,
             AutoHide = true
         };
@@ -213,10 +213,10 @@ public class TestToastService : IToastService
 
     public void ShowError(string message, string? title = null)
     {
-        var toast = new ToastMessage 
-        { 
-            Message = message, 
-            Title = title ?? "Error", 
+        var toast = new ToastMessage
+        {
+            Message = message,
+            Title = title ?? "Error",
             Type = ToastType.Danger,
             AutoHide = true
         };

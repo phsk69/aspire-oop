@@ -21,7 +21,7 @@ public class AuthorizedHttpMessageHandlerTests
         _innerHandler = new TestHttpMessageHandler();
         _httpContextAccessor = new TestHttpContextAccessor();
         _logger = new TestLogger<AuthorizedHttpMessageHandler>();
-        
+
         _handler = new AuthorizedHttpMessageHandler(_httpContextAccessor, _logger)
         {
             InnerHandler = _innerHandler
@@ -46,12 +46,12 @@ public class AuthorizedHttpMessageHandlerTests
     {
         // Arrange
         _httpContextAccessor.SetAuthenticatedUser(
-            "test@example.com", 
-            "user123", 
-            ["User"], 
+            "test@example.com",
+            "user123",
+            ["User"],
             "test-bearer-token"
         );
-        
+
         _innerHandler.SetupResponse("/api/test", HttpStatusCode.OK, new { message = "success" });
 
         // Act
@@ -60,7 +60,7 @@ public class AuthorizedHttpMessageHandlerTests
         // Assert
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
         Assert.HasCount(1, _innerHandler.Requests);
-        
+
         var request = _innerHandler.Requests[0];
         Assert.IsNotNull(request.Headers.Authorization);
         Assert.AreEqual("Bearer", request.Headers.Authorization.Scheme);
@@ -72,12 +72,12 @@ public class AuthorizedHttpMessageHandlerTests
     {
         // Arrange
         _httpContextAccessor.SetAuthenticatedUser(
-            "test@example.com", 
-            "user123", 
+            "test@example.com",
+            "user123",
             ["User"]
             // No access token
         );
-        
+
         _innerHandler.SetupResponse("/api/test", HttpStatusCode.OK, new { message = "success" });
 
         // Act
@@ -86,7 +86,7 @@ public class AuthorizedHttpMessageHandlerTests
         // Assert
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
         Assert.HasCount(1, _innerHandler.Requests);
-        
+
         var request = _innerHandler.Requests[0];
         Assert.IsNull(request.Headers.Authorization);
     }
@@ -104,7 +104,7 @@ public class AuthorizedHttpMessageHandlerTests
         // Assert
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
         Assert.HasCount(1, _innerHandler.Requests);
-        
+
         var request = _innerHandler.Requests[0];
         Assert.IsNull(request.Headers.Authorization);
     }
@@ -122,7 +122,7 @@ public class AuthorizedHttpMessageHandlerTests
         // Assert
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
         Assert.HasCount(1, _innerHandler.Requests);
-        
+
         var request = _innerHandler.Requests[0];
         Assert.IsNull(request.Headers.Authorization);
     }
@@ -132,12 +132,12 @@ public class AuthorizedHttpMessageHandlerTests
     {
         // Arrange
         _httpContextAccessor.SetAuthenticatedUser(
-            "test@example.com", 
-            "user123", 
-            ["User"], 
+            "test@example.com",
+            "user123",
+            ["User"],
             "test-token"
         );
-        
+
         _innerHandler.SetupResponse("/api/test", HttpStatusCode.OK);
 
         // Act
@@ -145,19 +145,19 @@ public class AuthorizedHttpMessageHandlerTests
 
         // Assert
         var infoLogs = _logger.LogEntries.Where(l => l.LogLevel == LogLevel.Information).ToList();
-        
+
         // Should log that HttpContext is not null
         Assert.IsTrue(infoLogs.Any(l => l.Message.Contains("HttpContext is null: False")));
-        
+
         // Should log that user is authenticated
         Assert.IsTrue(infoLogs.Any(l => l.Message.Contains("User authenticated: True")));
-        
+
         // Should log user name
         Assert.IsTrue(infoLogs.Any(l => l.Message.Contains("User name: test@example.com")));
-        
+
         // Should log that Bearer token was added
         Assert.IsTrue(infoLogs.Any(l => l.Message.Contains("Added Bearer token to request")));
-        
+
         // Should log response status
         Assert.IsTrue(infoLogs.Any(l => l.Message.Contains("Response status: OK")));
     }
@@ -167,12 +167,12 @@ public class AuthorizedHttpMessageHandlerTests
     {
         // Arrange
         _httpContextAccessor.SetAuthenticatedUser(
-            "test@example.com", 
-            "user123", 
+            "test@example.com",
+            "user123",
             ["User"]
             // No access token
         );
-        
+
         _innerHandler.SetupResponse("/api/test", HttpStatusCode.OK);
 
         // Act
@@ -188,12 +188,12 @@ public class AuthorizedHttpMessageHandlerTests
     {
         // Arrange
         _httpContextAccessor.SetAuthenticatedUser(
-            "test@example.com", 
-            "user123", 
-            ["User"], 
+            "test@example.com",
+            "user123",
+            ["User"],
             ""  // Empty token
         );
-        
+
         _innerHandler.SetupResponse("/api/test", HttpStatusCode.OK);
 
         // Act
@@ -202,7 +202,7 @@ public class AuthorizedHttpMessageHandlerTests
         // Assert
         var request = _innerHandler.Requests[0];
         Assert.IsNull(request.Headers.Authorization);
-        
+
         // Should log warning about no token
         var warningLogs = _logger.LogEntries.Where(l => l.LogLevel == LogLevel.Warning).ToList();
         Assert.IsTrue(warningLogs.Any(l => l.Message.Contains("No JWT token found in user claims")));
@@ -214,12 +214,12 @@ public class AuthorizedHttpMessageHandlerTests
         // Arrange
         var whitespaceToken = "   ";
         _httpContextAccessor.SetAuthenticatedUser(
-            "test@example.com", 
-            "user123", 
-            ["User"], 
+            "test@example.com",
+            "user123",
+            ["User"],
             whitespaceToken
         );
-        
+
         _innerHandler.SetupResponse("/api/test", HttpStatusCode.OK);
 
         // Act
@@ -230,7 +230,7 @@ public class AuthorizedHttpMessageHandlerTests
         Assert.IsNotNull(request.Headers.Authorization);
         Assert.AreEqual("Bearer", request.Headers.Authorization.Scheme);
         Assert.AreEqual(whitespaceToken, request.Headers.Authorization.Parameter);
-        
+
         // Should log that Bearer token was added (since string.IsNullOrEmpty allows whitespace)
         var infoLogs = _logger.LogEntries.Where(l => l.LogLevel == LogLevel.Information).ToList();
         Assert.IsTrue(infoLogs.Any(l => l.Message.Contains("Added Bearer token to request")));
@@ -241,18 +241,18 @@ public class AuthorizedHttpMessageHandlerTests
     {
         // Arrange
         _httpContextAccessor.SetAuthenticatedUser(
-            "test@example.com", 
-            "user123", 
-            ["User"], 
+            "test@example.com",
+            "user123",
+            ["User"],
             "new-token"
         );
-        
+
         _innerHandler.SetupResponse("/api/test", HttpStatusCode.OK);
 
         // Act
         var request = new HttpRequestMessage(HttpMethod.Get, "/api/test");
         request.Headers.Authorization = new AuthenticationHeaderValue("Basic", "existing-auth");
-        
+
         var response = await _httpClient.SendAsync(request, TestContext.CancellationTokenSource.Token);
 
         // Assert
@@ -267,12 +267,12 @@ public class AuthorizedHttpMessageHandlerTests
     {
         // Arrange
         _httpContextAccessor.SetAuthenticatedUser(
-            "test@example.com", 
-            "user123", 
-            ["User"], 
+            "test@example.com",
+            "user123",
+            ["User"],
             "test-token"
         );
-        
+
         _innerHandler.SetupResponse("/api/test", HttpStatusCode.NotFound);
 
         // Act
@@ -280,7 +280,7 @@ public class AuthorizedHttpMessageHandlerTests
 
         // Assert
         Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode);
-        
+
         // Should log response status
         var infoLogs = _logger.LogEntries.Where(l => l.LogLevel == LogLevel.Information).ToList();
         Assert.IsTrue(infoLogs.Any(l => l.Message.Contains("Response status: NotFound")));

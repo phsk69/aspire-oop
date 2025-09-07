@@ -6,8 +6,8 @@ public class TestItemsDictionary : IDictionary<object, object?>
 {
     private readonly Dictionary<object, object?> _inner = [];
 
-    public object? this[object key] 
-    { 
+    public object? this[object key]
+    {
         get => _inner.TryGetValue(key, out var value) ? value : null;
         set => _inner[key] = value;
     }

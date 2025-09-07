@@ -32,21 +32,21 @@ if (databaseOptions.UseInMemory)
 {
     // All contexts use the same in-memory database for development
     var dbName = "AspireDeezNutsDb";
-    
+
     builder.Services.AddDbContext<AppMigrationDbContext>(options =>
     {
         options.UseInMemoryDatabase(dbName);
         if (databaseOptions.EnableSensitiveDataLogging)
             options.EnableSensitiveDataLogging();
     });
-    
+
     builder.Services.AddDbContext<AppReadWriteDbContext>(options =>
     {
         options.UseInMemoryDatabase(dbName);
         if (databaseOptions.EnableSensitiveDataLogging)
             options.EnableSensitiveDataLogging();
     });
-    
+
     builder.Services.AddDbContext<AppReadOnlyDbContext>(options =>
     {
         options.UseInMemoryDatabase(dbName);
@@ -87,7 +87,7 @@ else if (databaseOptions.UsePostgreSql)
                 options.EnableSensitiveDataLogging();
         });
     }
-    
+
     // Read-Write context - for DML operations
     var readWriteConnectionString = connectionStrings.GetReadWriteConnectionString();
     if (!string.IsNullOrEmpty(readWriteConnectionString) && readWriteConnectionString != "DataSource=:memory:")
@@ -118,7 +118,7 @@ else if (databaseOptions.UsePostgreSql)
                 options.EnableSensitiveDataLogging();
         });
     }
-    
+
     // Read-Only context - for SELECT operations
     var readOnlyConnectionString = connectionStrings.GetReadOnlyConnectionString();
     if (!string.IsNullOrEmpty(readOnlyConnectionString) && readOnlyConnectionString != "DataSource=:memory:")
@@ -156,21 +156,21 @@ else
 {
     // Default to InMemory for all contexts
     var dbName = "AspireDeezNutsDb";
-    
+
     builder.Services.AddDbContext<AppMigrationDbContext>(options =>
     {
         options.UseInMemoryDatabase(dbName);
         if (databaseOptions.EnableSensitiveDataLogging)
             options.EnableSensitiveDataLogging();
     });
-    
+
     builder.Services.AddDbContext<AppReadWriteDbContext>(options =>
     {
         options.UseInMemoryDatabase(dbName);
         if (databaseOptions.EnableSensitiveDataLogging)
             options.EnableSensitiveDataLogging();
     });
-    
+
     builder.Services.AddDbContext<AppReadOnlyDbContext>(options =>
     {
         options.UseInMemoryDatabase(dbName);
@@ -337,7 +337,7 @@ using (var scope = app.Services.CreateScope())
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
     var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
     var dbOptions = configuration.GetSection(DatabaseOptions.Database).Get<DatabaseOptions>() ?? new DatabaseOptions();
-    
+
     if (dbOptions.UseInMemory)
     {
         logger.LogInformation("Using InMemory database, ensuring created");
@@ -350,11 +350,11 @@ using (var scope = app.Services.CreateScope())
         {
             logger.LogInformation("Checking PostgreSQL database connection");
             var migrationContext = scope.ServiceProvider.GetRequiredService<AppMigrationDbContext>();
-            
+
             if (await migrationContext.Database.CanConnectAsync())
             {
                 logger.LogInformation("PostgreSQL connection successful");
-                
+
                 if (dbOptions.AutoMigrateOnStartup)
                 {
                     var pendingMigrations = await migrationContext.Database.GetPendingMigrationsAsync();
@@ -400,7 +400,7 @@ using (var scope = app.Services.CreateScope())
         var migrationContext = scope.ServiceProvider.GetRequiredService<AppMigrationDbContext>();
         await migrationContext.Database.EnsureCreatedAsync();
     }
-    
+
     // Run data seeder using the Identity service
     var identityService = scope.ServiceProvider.GetRequiredService<IIdentityDbService>();
     await identityService.SeedDataAsync();

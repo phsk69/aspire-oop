@@ -18,10 +18,10 @@ public class LoginResponse
 {
     [JsonPropertyName("accessToken")]
     public required string AccessToken { get; set; }
-    
+
     [JsonPropertyName("refreshToken")]
     public required string RefreshToken { get; set; }
-    
+
     [JsonPropertyName("expiresIn")]
     public int ExpiresIn { get; set; }
 }
@@ -65,7 +65,7 @@ public class AuthSuccessResponse
 {
     [JsonPropertyName("message")]
     public string? Message { get; set; }
-    
+
     [JsonPropertyName("userId")]
     public string? UserId { get; set; }
 }

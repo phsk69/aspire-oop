@@ -9,10 +9,10 @@ public class FuzzTestingService(
     {
         logger.LogInformation("Fuzz Testing Service started");
         FuzzTestingHealthCheck.SetRunningState(true);
-        
+
         var cycleDelayMinutes = configuration.GetValue<int>("FuzzTesting:CycleDelayMinutes", 5);
         var cycleDelay = TimeSpan.FromMinutes(cycleDelayMinutes);
-        
+
         try
         {
             while (!stoppingToken.IsCancellationRequested)
@@ -21,9 +21,9 @@ public class FuzzTestingService(
                 {
                     logger.LogInformation("Running fuzz test cycle...");
                     await fuzzTestRunner.RunTestCycleAsync(stoppingToken);
-                    
+
                     logger.LogInformation("Fuzz test cycle completed. Next cycle in {Minutes} minutes", cycleDelayMinutes);
-                    
+
                     // Wait before next cycle
                     await Task.Delay(cycleDelay, stoppingToken);
                 }

@@ -19,7 +19,7 @@ public class CustomRevalidatingAuthenticationStateProvider(
     private readonly ILogger<CustomRevalidatingAuthenticationStateProvider> _logger = loggerFactory.CreateLogger<CustomRevalidatingAuthenticationStateProvider>();
     private readonly AuthenticationOptions _authOptions = authOptions.Value;
     private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
-    
+
     // Track suspicious token usage patterns for audit logging
     private readonly ConcurrentDictionary<string, List<DateTime>> _tokenUsageAttempts = new();
     private readonly object _auditLock = new();
@@ -43,7 +43,7 @@ public class CustomRevalidatingAuthenticationStateProvider(
                 }
             }
         }
-        
+
         // Otherwise use the base implementation
         return await base.GetAuthenticationStateAsync();
     }
@@ -76,14 +76,14 @@ public class CustomRevalidatingAuthenticationStateProvider(
             if (timeUntilExpiry.TotalMinutes <= 0)
             {
                 _logger.LogWarning("Token has expired - clearing authentication");
-                
+
                 // Clear user-specific cached principal
                 var userId = GetUserIdentifier(authenticationState.User);
                 if (!string.IsNullOrEmpty(userId))
                 {
                     ClearCachedPrincipalForUser(userId);
                 }
-                
+
                 // Try to clear cookies if possible
                 using (var scope = scopeFactory.CreateScope())
                 {
@@ -101,18 +101,18 @@ public class CustomRevalidatingAuthenticationStateProvider(
                         }
                     }
                 }
-                
+
                 // Notify that user is no longer authenticated
                 var anonymousPrincipal = new ClaimsPrincipal(new ClaimsIdentity());
                 NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(anonymousPrincipal)));
-                
+
                 return false;
             }
 
             if (timeUntilExpiry.TotalMinutes <= 10) // Refresh if less than 10 minutes left
             {
                 _logger.LogInformation("Token needs refresh, attempting to refresh");
-                
+
                 // Get refresh token from claims
                 var refreshTokenClaim = authenticationState.User.Claims.FirstOrDefault(c => c.Type == "refresh_token");
                 if (refreshTokenClaim == null)
@@ -120,10 +120,10 @@ public class CustomRevalidatingAuthenticationStateProvider(
                     _logger.LogWarning("No refresh_token claim found, cannot refresh");
                     return false;
                 }
-                
+
                 using var scope = scopeFactory.CreateScope();
                 var authService = scope.ServiceProvider.GetRequiredService<IAuthService>();
-                
+
                 // Validate refresh token ownership before processing
                 var currentUserId = GetUserIdentifier(authenticationState.User);
                 if (string.IsNullOrEmpty(currentUserId))
@@ -132,7 +132,7 @@ public class CustomRevalidatingAuthenticationStateProvider(
                     LogSuspiciousActivity("MISSING_USER_ID", "Token refresh attempted without valid user identifier");
                     return false;
                 }
-                
+
                 // Validate that the refresh token belongs to the current user context
                 if (!ValidateRefreshTokenOwnership(refreshTokenClaim.Value, currentUserId))
                 {
@@ -140,14 +140,14 @@ public class CustomRevalidatingAuthenticationStateProvider(
                     LogSuspiciousActivity(currentUserId, "Attempted to use refresh token that doesn't belong to current user");
                     return false;
                 }
-                
+
                 // Try to refresh both tokens using the refresh token from claims
                 var newTokens = await authService.RefreshTokensAsync(refreshTokenClaim.Value);
-                
+
                 if (newTokens != null && !string.IsNullOrEmpty(newTokens.AccessToken))
                 {
                     _logger.LogInformation("Tokens refreshed successfully for user: {UserId}", currentUserId);
-                    
+
                     // Validate that the new access token belongs to the same user
                     if (!ValidateNewTokenOwnership(newTokens.AccessToken, currentUserId))
                     {
@@ -155,11 +155,11 @@ public class CustomRevalidatingAuthenticationStateProvider(
                         LogSuspiciousActivity(currentUserId, "Received access token that doesn't match current user identity");
                         return false;
                     }
-                    
+
                     // Update the cookie authentication principal first
                     var httpContextAccessor = scope.ServiceProvider.GetRequiredService<IHttpContextAccessor>();
                     var newPrincipal = await UpdateCookieAuthenticationAsync(newTokens, authenticationState.User, httpContextAccessor);
-                    
+
                     if (newPrincipal != null)
                     {
                         // Cache the new principal for this specific user
@@ -168,13 +168,13 @@ public class CustomRevalidatingAuthenticationStateProvider(
                         {
                             CachePrincipalForUser(userId, newPrincipal);
                         }
-                        
+
                         // Update the authentication state with the new principal
                         NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(newPrincipal)));
-                        
+
                         // Broadcast SignalR notification for automatic token refresh
                         await NotifyTokenRefreshViaSignalR(newTokens, newPrincipal, scope);
-                        
+
                         _logger.LogInformation("Authentication cookie and state updated successfully, cached for user: {UserId}", userId);
                         return true;
                     }
@@ -193,11 +193,11 @@ public class CustomRevalidatingAuthenticationStateProvider(
                     {
                         ClearCachedPrincipalForUser(userId);
                     }
-                    
+
                     // Notify that user is no longer authenticated
                     var anonymousPrincipal = new ClaimsPrincipal(new ClaimsIdentity());
                     NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(anonymousPrincipal)));
-                    
+
                     return false; // This will cause a re-authentication
                 }
             }
@@ -217,16 +217,16 @@ public class CustomRevalidatingAuthenticationStateProvider(
         {
             var handler = new JwtSecurityTokenHandler();
             var jwtToken = handler.ReadJwtToken(newToken);
-            
+
             // Create new claims list with updated token
             var claims = jwtToken.Claims.ToList();
             claims.Add(new Claim("access_token", newToken));
-            
+
             // Preserve essential claims from current user
             var existingNameClaim = currentUser.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Name);
             var existingEmailClaim = currentUser.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email);
             var existingRefreshTokenClaim = currentUser.Claims.FirstOrDefault(c => c.Type == "refresh_token");
-            
+
             if (existingNameClaim != null && !claims.Any(c => c.Type == ClaimTypes.Name))
             {
                 claims.Add(existingNameClaim);
@@ -242,19 +242,19 @@ public class CustomRevalidatingAuthenticationStateProvider(
 
             var identity = new ClaimsIdentity(claims, currentUser.Identity!.AuthenticationType);
             var newPrincipal = new ClaimsPrincipal(identity);
-            
+
             // Cache the new principal for this specific user
             var userId = GetUserIdentifier(newPrincipal);
             if (!string.IsNullOrEmpty(userId))
             {
                 CachePrincipalForUser(userId, newPrincipal);
             }
-            
+
             // Notify that authentication state changed
             NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(newPrincipal)));
-            
+
             _logger.LogInformation("Authentication state updated with new token and cached for user: {UserId}", userId);
-            
+
             // Small delay to ensure state propagation
             await Task.Delay(1);
         }
@@ -270,21 +270,21 @@ public class CustomRevalidatingAuthenticationStateProvider(
         {
             var handler = new JwtSecurityTokenHandler();
             var jwtToken = handler.ReadJwtToken(newTokens.AccessToken);
-            
+
             // Create new claims list with updated tokens
             var claims = jwtToken.Claims.ToList();
             claims.Add(new Claim("access_token", newTokens.AccessToken));
-            
+
             // Add the new refresh token
             if (!string.IsNullOrEmpty(newTokens.RefreshToken))
             {
                 claims.Add(new Claim("refresh_token", newTokens.RefreshToken));
             }
-            
+
             // Preserve essential claims from current user
             var existingNameClaim = currentUser.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Name);
             var existingEmailClaim = currentUser.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email);
-            
+
             if (existingNameClaim != null && !claims.Any(c => c.Type == ClaimTypes.Name))
             {
                 claims.Add(existingNameClaim);
@@ -296,19 +296,19 @@ public class CustomRevalidatingAuthenticationStateProvider(
 
             var identity = new ClaimsIdentity(claims, currentUser.Identity!.AuthenticationType);
             var newPrincipal = new ClaimsPrincipal(identity);
-            
+
             // Cache the new principal for this specific user
             var userId = GetUserIdentifier(newPrincipal);
             if (!string.IsNullOrEmpty(userId))
             {
                 CachePrincipalForUser(userId, newPrincipal);
             }
-            
+
             // Notify that authentication state changed
             NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(newPrincipal)));
-            
+
             _logger.LogInformation("Authentication state updated with new access and refresh tokens and cached for user: {UserId}", userId);
-            
+
             // Small delay to ensure state propagation
             await Task.Delay(1);
         }
@@ -343,7 +343,7 @@ public class CustomRevalidatingAuthenticationStateProvider(
                 {
                     tempClaims.Add(new Claim("refresh_token", newTokens.RefreshToken));
                 }
-                
+
                 var tempIdentity = new ClaimsIdentity(tempClaims, currentUser.Identity!.AuthenticationType);
                 return new ClaimsPrincipal(tempIdentity);
             }
@@ -351,21 +351,21 @@ public class CustomRevalidatingAuthenticationStateProvider(
             // Parse the new JWT token to get updated claims
             var jwtHandler = new JwtSecurityTokenHandler();
             var jwt = jwtHandler.ReadJwtToken(newTokens.AccessToken);
-            
+
             // Create new claims list with updated tokens
             var claims = jwt.Claims.ToList();
             claims.Add(new Claim("access_token", newTokens.AccessToken));
-            
+
             // Add the new refresh token
             if (!string.IsNullOrEmpty(newTokens.RefreshToken))
             {
                 claims.Add(new Claim("refresh_token", newTokens.RefreshToken));
             }
-            
+
             // Preserve essential claims from current user that might not be in JWT
             var existingNameClaim = currentUser.FindFirst(ClaimTypes.Name);
             var existingEmailClaim = currentUser.FindFirst(ClaimTypes.Email);
-            
+
             if (existingNameClaim != null && !claims.Any(c => c.Type == ClaimTypes.Name))
             {
                 claims.Add(existingNameClaim);
@@ -378,10 +378,10 @@ public class CustomRevalidatingAuthenticationStateProvider(
             // Create new principal and sign in to update the cookie
             var identity = new ClaimsIdentity(claims, currentUser.Identity!.AuthenticationType);
             var newPrincipal = new ClaimsPrincipal(identity);
-            
+
             await httpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, newPrincipal);
             _logger.LogInformation("Authentication cookie updated with new tokens");
-            
+
             return newPrincipal;
         }
         catch (Exception ex)
@@ -397,12 +397,12 @@ public class CustomRevalidatingAuthenticationStateProvider(
         {
             var notificationService = scope.ServiceProvider.GetService<IAuthStateNotificationService>();
             var tokenInfoService = scope.ServiceProvider.GetService<ITokenInfoService>();
-            
+
             if (notificationService != null && tokenInfoService != null && !string.IsNullOrEmpty(newTokens.AccessToken))
             {
                 // Get user ID from claims for SignalR notification with validation
                 var userId = GetUserIdentifier(currentUser);
-                
+
                 if (!string.IsNullOrEmpty(userId))
                 {
                     // Validate user context before sending SignalR notification
@@ -446,7 +446,7 @@ public class CustomRevalidatingAuthenticationStateProvider(
             _logger.LogDebug("User is not authenticated - cannot get user identifier");
             return null;
         }
-        
+
         // Try multiple claim types that could serve as user identifier, with validation
         var identifier = user.FindFirst(ClaimTypes.NameIdentifier)?.Value
             ?? user.FindFirst(ClaimTypes.Name)?.Value
@@ -454,15 +454,15 @@ public class CustomRevalidatingAuthenticationStateProvider(
             ?? user.FindFirst("sub")?.Value
             ?? user.FindFirst("email")?.Value
             ?? user.FindFirst("preferred_username")?.Value;
-        
+
         if (string.IsNullOrWhiteSpace(identifier))
         {
-            _logger.LogWarning("Failed to resolve user identifier. Available claims: {Claims}", 
+            _logger.LogWarning("Failed to resolve user identifier. Available claims: {Claims}",
                 string.Join(", ", user.Claims.Select(c => $"{c.Type}={c.Value.Substring(0, Math.Min(c.Value.Length, 10))}...")));
             LogSuspiciousActivity("UNKNOWN", "User authentication state missing valid identifier claims");
             return null;
         }
-        
+
         // Validate identifier format (basic security check)
         if (identifier.Length > 256 || identifier.Contains("<") || identifier.Contains(">") || identifier.Contains("script"))
         {
@@ -470,7 +470,7 @@ public class CustomRevalidatingAuthenticationStateProvider(
             LogSuspiciousActivity(identifier, "Potentially malicious user identifier format detected");
             return null;
         }
-        
+
         return identifier;
     }
 
@@ -500,14 +500,14 @@ public class CustomRevalidatingAuthenticationStateProvider(
             httpContext.Items.Remove($"CachedPrincipal_{userId}");
         }
     }
-    
+
     private bool ValidateRefreshTokenOwnership(string refreshToken, string userId)
     {
         try
         {
             // Parse the refresh token to validate it belongs to the current user
             var handler = new JwtSecurityTokenHandler();
-            
+
             // Check if the token can be read as JWT (refresh tokens might not always be JWT)
             if (!handler.CanReadToken(refreshToken))
             {
@@ -515,24 +515,24 @@ public class CustomRevalidatingAuthenticationStateProvider(
                 _logger.LogDebug("Refresh token is not a JWT, ownership validation will be done by API service");
                 return true;
             }
-            
+
             var jwtToken = handler.ReadJwtToken(refreshToken);
             var tokenUserId = jwtToken.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier || c.Type == "sub")?.Value;
-            
+
             if (string.IsNullOrEmpty(tokenUserId))
             {
                 _logger.LogWarning("Refresh token does not contain user identifier claim");
                 return false;
             }
-            
+
             var ownershipValid = string.Equals(tokenUserId, userId, StringComparison.Ordinal);
             if (!ownershipValid)
             {
-                _logger.LogWarning("Refresh token user ID mismatch - token: {TokenUserId}, current: {CurrentUserId}", 
-                    tokenUserId.Substring(0, Math.Min(tokenUserId.Length, 10)) + "...", 
+                _logger.LogWarning("Refresh token user ID mismatch - token: {TokenUserId}, current: {CurrentUserId}",
+                    tokenUserId.Substring(0, Math.Min(tokenUserId.Length, 10)) + "...",
                     userId.Substring(0, Math.Min(userId.Length, 10)) + "...");
             }
-            
+
             return ownershipValid;
         }
         catch (Exception ex)
@@ -541,30 +541,30 @@ public class CustomRevalidatingAuthenticationStateProvider(
             return false;
         }
     }
-    
+
     private bool ValidateNewTokenOwnership(string accessToken, string expectedUserId)
     {
         try
         {
             var handler = new JwtSecurityTokenHandler();
             var jwtToken = handler.ReadJwtToken(accessToken);
-            
+
             var tokenUserId = jwtToken.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier || c.Type == "sub")?.Value;
-            
+
             if (string.IsNullOrEmpty(tokenUserId))
             {
                 _logger.LogWarning("New access token does not contain user identifier claim");
                 return false;
             }
-            
+
             var ownershipValid = string.Equals(tokenUserId, expectedUserId, StringComparison.Ordinal);
             if (!ownershipValid)
             {
-                _logger.LogError("New access token user ID mismatch - token: {TokenUserId}, expected: {ExpectedUserId}", 
-                    tokenUserId.Substring(0, Math.Min(tokenUserId.Length, 10)) + "...", 
+                _logger.LogError("New access token user ID mismatch - token: {TokenUserId}, expected: {ExpectedUserId}",
+                    tokenUserId.Substring(0, Math.Min(tokenUserId.Length, 10)) + "...",
                     expectedUserId.Substring(0, Math.Min(expectedUserId.Length, 10)) + "...");
             }
-            
+
             return ownershipValid;
         }
         catch (Exception ex)
@@ -573,7 +573,7 @@ public class CustomRevalidatingAuthenticationStateProvider(
             return false;
         }
     }
-    
+
     private bool ValidateUserContextForNotification(ClaimsPrincipal user, string userId)
     {
         if (user?.Identity?.IsAuthenticated != true)
@@ -581,7 +581,7 @@ public class CustomRevalidatingAuthenticationStateProvider(
             _logger.LogWarning("User context validation failed - user is not authenticated");
             return false;
         }
-        
+
         // Validate that the user ID matches what we expect from the principal
         var principalUserId = GetUserIdentifier(user);
         if (string.IsNullOrEmpty(principalUserId) || !string.Equals(principalUserId, userId, StringComparison.Ordinal))
@@ -589,44 +589,44 @@ public class CustomRevalidatingAuthenticationStateProvider(
             _logger.LogWarning("User context validation failed - principal user ID mismatch");
             return false;
         }
-        
+
         // Additional validation: check for required claims
-        var hasRequiredClaims = user.HasClaim(ClaimTypes.NameIdentifier, userId) || 
-                               user.HasClaim("sub", userId) || 
-                               user.HasClaim(ClaimTypes.Name, userId) || 
+        var hasRequiredClaims = user.HasClaim(ClaimTypes.NameIdentifier, userId) ||
+                               user.HasClaim("sub", userId) ||
+                               user.HasClaim(ClaimTypes.Name, userId) ||
                                user.HasClaim(ClaimTypes.Email, userId);
-        
+
         if (!hasRequiredClaims)
         {
             _logger.LogWarning("User context validation failed - missing required claims for user: {UserId}", userId);
             return false;
         }
-        
+
         return true;
     }
-    
+
     private void LogSuspiciousActivity(string userId, string activity)
     {
         lock (_auditLock)
         {
             var key = $"{userId}_{activity}";
             var now = DateTime.UtcNow;
-            
+
             if (!_tokenUsageAttempts.TryGetValue(key, out var attempts))
             {
                 attempts = [];
                 _tokenUsageAttempts[key] = attempts;
             }
-            
+
             attempts.Add(now);
-            
+
             // Clean old attempts (older than 1 hour)
             attempts.RemoveAll(a => now - a > TimeSpan.FromHours(1));
-            
+
             // Log suspicious patterns
             if (attempts.Count >= 3)
             {
-                _logger.LogError("SECURITY ALERT: Repeated suspicious activity detected - User: {UserId}, Activity: {Activity}, Attempts: {Count} in last hour", 
+                _logger.LogError("SECURITY ALERT: Repeated suspicious activity detected - User: {UserId}, Activity: {Activity}, Attempts: {Count} in last hour",
                     userId, activity, attempts.Count);
             }
             else

@@ -193,23 +193,23 @@ app.MapPost("/api/login", async (HttpContext context, IAuthService authService) 
     {
         // Get both tokens from the auth service
         var loginResponse = await authService.GetLoginResponseAsync();
-        
+
         if (loginResponse != null && !string.IsNullOrEmpty(loginResponse.AccessToken))
         {
             // Parse claims from JWT token
             var handler = new JwtSecurityTokenHandler();
             var jwtToken = handler.ReadJwtToken(loginResponse.AccessToken);
-            
+
             // Extract all claims from the JWT token
             var claims = jwtToken.Claims.ToList();
-            
+
             // Add both tokens as claims for API calls and refresh
             claims.Add(new Claim("access_token", loginResponse.AccessToken));
             if (!string.IsNullOrEmpty(loginResponse.RefreshToken))
             {
                 claims.Add(new Claim("refresh_token", loginResponse.RefreshToken));
             }
-            
+
             // Ensure we have essential claims
             if (!claims.Any(c => c.Type == ClaimTypes.Name))
             {
@@ -219,7 +219,7 @@ app.MapPost("/api/login", async (HttpContext context, IAuthService authService) 
             {
                 claims.Add(new Claim(ClaimTypes.Email, loginRequest.Email));
             }
-            
+
             var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
             await context.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(claimsIdentity));
         }
@@ -231,7 +231,7 @@ app.MapPost("/api/login", async (HttpContext context, IAuthService authService) 
                 new(ClaimTypes.Name, loginRequest.Email),
                 new(ClaimTypes.Email, loginRequest.Email)
             };
-            
+
             var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
             await context.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(claimsIdentity));
         }

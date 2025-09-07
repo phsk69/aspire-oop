@@ -9,14 +9,14 @@ This project uses a **three-tier connection string strategy** for PostgreSQL dat
 - **Purpose**: Schema changes, migrations, database structure modifications
 - **Permissions**: Full database ownership privileges
 - **Usage**: Entity Framework migrations, database initialization
-- **Connection Key**: `PostgreSQL_DBO` / `SqlServer_DBO`
+- **Connection Key**: `MigrationConnection`
 
 ### ✏️ **RW (Read-Write)**
 
 - **Purpose**: Standard CRUD operations, transaction processing
 - **Permissions**: INSERT, UPDATE, DELETE, SELECT on application tables
 - **Usage**: Business logic operations, user data modifications
-- **Connection Key**: `PostgreSQL_RW` / `SqlServer_RW`
+- **Connection Key**: `ReadWriteConnection`
 
 ### 👀 **RO (Read-Only)**
 
@@ -74,26 +74,76 @@ This project uses a **three-tier connection string strategy** for PostgreSQL dat
 ### Database User Setup (PostgreSQL)
 
 ```sql
--- Create database and users
-CREATE DATABASE aspire_deez_nuts;
+-- Create roles if they don't exist
+CREATE ROLE svc_dev_aspire_deez_nutz_dbo WITH LOGIN PASSWORD '4Xbc8tun' NOCREATEDB NOCREATEROLE;
+CREATE ROLE svc_dev_aspire_deez_nutz_rw WITH LOGIN PASSWORD '4Xbc8tun' NOCREATEDB NOCREATEROLE;  
+CREATE ROLE svc_dev_aspire_deez_nutz_ro WITH LOGIN PASSWORD '4Xbc8tun' NOCREATEDB NOCREATEROLE;
 
--- Create DBO user (Database Owner)
-CREATE USER aspire_dbo WITH PASSWORD 'secure_dbo_password';
-ALTER DATABASE aspire_deez_nuts OWNER TO aspire_dbo;
+-- Database permissions
+GRANT CONNECT ON DATABASE dev_aspire_deez_nutz TO svc_dev_aspire_deez_nutz_dbo;
+GRANT CONNECT ON DATABASE dev_aspire_deez_nutz TO svc_dev_aspire_deez_nutz_rw;
+GRANT CONNECT ON DATABASE dev_aspire_deez_nutz TO svc_dev_aspire_deez_nutz_ro;
 
--- Create RW user (Read-Write)
-CREATE USER aspire_rw WITH PASSWORD 'secure_rw_password';
-GRANT CONNECT ON DATABASE aspire_deez_nuts TO aspire_rw;
-GRANT CREATE, USAGE ON SCHEMA public TO aspire_rw;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO aspire_rw;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO aspire_rw;
+-- Schema permissions
+GRANT USAGE, CREATE ON SCHEMA public TO svc_dev_aspire_deez_nutz_dbo;
+GRANT USAGE ON SCHEMA public TO svc_dev_aspire_deez_nutz_rw;
+GRANT USAGE ON SCHEMA public TO svc_dev_aspire_deez_nutz_ro;
 
--- Create RO user (Read-Only)
-CREATE USER aspire_ro WITH PASSWORD 'secure_ro_password';
-GRANT CONNECT ON DATABASE aspire_deez_nuts TO aspire_ro;
-GRANT USAGE ON SCHEMA public TO aspire_ro;
-GRANT SELECT ON ALL TABLES IN SCHEMA public TO aspire_ro;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO aspire_ro;
+-- Existing objects permissions
+GRANT ALL ON ALL TABLES IN SCHEMA public TO svc_dev_aspire_deez_nutz_dbo;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO svc_dev_aspire_deez_nutz_rw;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO svc_dev_aspire_deez_nutz_ro;
+
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO svc_dev_aspire_deez_nutz_dbo;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO svc_dev_aspire_deez_nutz_rw;
+GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO svc_dev_aspire_deez_nutz_ro;
+
+-- Default privileges for future objects created by DBO
+ALTER DEFAULT PRIVILEGES FOR ROLE svc_dev_aspire_deez_nutz_dbo IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO svc_dev_aspire_deez_nutz_rw;
+ALTER DEFAULT PRIVILEGES FOR ROLE svc_dev_aspire_deez_nutz_dbo IN SCHEMA public GRANT SELECT ON TABLES TO svc_dev_aspire_deez_nutz_ro;
+ALTER DEFAULT PRIVILEGES FOR ROLE svc_dev_aspire_deez_nutz_dbo IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO svc_dev_aspire_deez_nutz_rw;
+ALTER DEFAULT PRIVILEGES FOR ROLE svc_dev_aspire_deez_nutz_dbo IN SCHEMA public GRANT SELECT ON SEQUENCES TO svc_dev_aspire_deez_nutz_ro;
+
+-- Default privileges for future objects created by postgres (EF migrations)
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON TABLES TO svc_dev_aspire_deez_nutz_dbo;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO svc_dev_aspire_deez_nutz_rw;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT ON TABLES TO svc_dev_aspire_deez_nutz_ro;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON SEQUENCES TO svc_dev_aspire_deez_nutz_dbo;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO svc_dev_aspire_deez_nutz_rw;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT ON SEQUENCES TO svc_dev_aspire_deez_nutz_ro;
+
+-- Role hierarchy
+GRANT svc_dev_aspire_deez_nutz_ro TO svc_dev_aspire_deez_nutz_rw;
+GRANT svc_dev_aspire_deez_nutz_rw TO svc_dev_aspire_deez_nutz_dbo;
+
+-- Fix permissions on existing Identity tables
+GRANT ALL ON TABLE "AspNetRoles" TO svc_dev_aspire_deez_nutz_dbo;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE "AspNetRoles" TO svc_dev_aspire_deez_nutz_rw;
+GRANT SELECT ON TABLE "AspNetRoles" TO svc_dev_aspire_deez_nutz_ro;
+
+GRANT ALL ON TABLE "AspNetUsers" TO svc_dev_aspire_deez_nutz_dbo;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE "AspNetUsers" TO svc_dev_aspire_deez_nutz_rw;
+GRANT SELECT ON TABLE "AspNetUsers" TO svc_dev_aspire_deez_nutz_ro;
+
+GRANT ALL ON TABLE "AspNetUserRoles" TO svc_dev_aspire_deez_nutz_dbo;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE "AspNetUserRoles" TO svc_dev_aspire_deez_nutz_rw;
+GRANT SELECT ON TABLE "AspNetUserRoles" TO svc_dev_aspire_deez_nutz_ro;
+
+GRANT ALL ON TABLE "AspNetUserClaims" TO svc_dev_aspire_deez_nutz_dbo;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE "AspNetUserClaims" TO svc_dev_aspire_deez_nutz_rw;
+GRANT SELECT ON TABLE "AspNetUserClaims" TO svc_dev_aspire_deez_nutz_ro;
+
+GRANT ALL ON TABLE "AspNetUserLogins" TO svc_dev_aspire_deez_nutz_dbo;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE "AspNetUserLogins" TO svc_dev_aspire_deez_nutz_rw;
+GRANT SELECT ON TABLE "AspNetUserLogins" TO svc_dev_aspire_deez_nutz_ro;
+
+GRANT ALL ON TABLE "AspNetUserTokens" TO svc_dev_aspire_deez_nutz_dbo;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE "AspNetUserTokens" TO svc_dev_aspire_deez_nutz_rw;
+GRANT SELECT ON TABLE "AspNetUserTokens" TO svc_dev_aspire_deez_nutz_ro;
+
+GRANT ALL ON TABLE "AspNetRoleClaims" TO svc_dev_aspire_deez_nutz_dbo;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE "AspNetRoleClaims" TO svc_dev_aspire_deez_nutz_rw;
+GRANT SELECT ON TABLE "AspNetRoleClaims" TO svc_dev_aspire_deez_nutz_ro;
 ```
 
 ## Security Benefits

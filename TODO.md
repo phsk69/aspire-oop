@@ -18,6 +18,9 @@
 ## Immediate
 
 - [ ] Pagination on the API, with a central "chopper" setup, as we want to be able to fetch chunks in a good way
+- [ ] Complete support for external db and inmem stuff in routes
+- [ ] Cascading delete?
+  - [ ] Relations on EF - how do they work, how do we get them defined in the entity code?
 
 ### Blazor Frontend Testing (Priority: Critical)
 

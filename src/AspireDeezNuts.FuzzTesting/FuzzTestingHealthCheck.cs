@@ -26,7 +26,7 @@ public class FuzzTestingHealthCheck : IHealthCheck
         CancellationToken cancellationToken = default)
     {
         var timeSinceLastCycle = DateTime.UtcNow - _lastTestCycleTime;
-        
+
         var data = new Dictionary<string, object>
         {
             ["LastTestCycle"] = _lastTestCycleTime.ToString("O"),
@@ -45,7 +45,7 @@ public class FuzzTestingHealthCheck : IHealthCheck
         if (timeSinceLastCycle > TimeSpan.FromMinutes(10))
         {
             return Task.FromResult(HealthCheckResult.Degraded(
-                $"No test cycle completed in the last {timeSinceLastCycle.TotalMinutes:F1} minutes", 
+                $"No test cycle completed in the last {timeSinceLastCycle.TotalMinutes:F1} minutes",
                 data: data));
         }
 
@@ -56,13 +56,13 @@ public class FuzzTestingHealthCheck : IHealthCheck
             if (failureRate > 0.5) // More than 50% failure rate
             {
                 return Task.FromResult(HealthCheckResult.Degraded(
-                    $"High failure rate: {failureRate:P1}", 
+                    $"High failure rate: {failureRate:P1}",
                     data: data));
             }
         }
 
         return Task.FromResult(HealthCheckResult.Healthy(
-            $"Fuzz testing service is healthy. Last cycle: {timeSinceLastCycle.TotalSeconds:F1} seconds ago", 
+            $"Fuzz testing service is healthy. Last cycle: {timeSinceLastCycle.TotalSeconds:F1} seconds ago",
             data: data));
     }
 }

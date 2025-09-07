@@ -776,7 +776,7 @@ public class UserControllerTests
     public async Task DeleteUser_WithoutAuthentication_ShouldReturnUnauthorized()
     {
         using var freshClient = _sharedFactory!.CreateClient();
-        
+
         var response = await freshClient.DeleteAsync("/api/v1/user/some-id", TestContext.CancellationTokenSource.Token);
 
         Assert.AreEqual(HttpStatusCode.Unauthorized, response.StatusCode);
